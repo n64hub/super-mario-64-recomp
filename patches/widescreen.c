@@ -70,6 +70,10 @@ void print_animated_red_coin(s16 x, s16 y);
 extern s8 gRedCoinsCollected;
 extern void *sTextureTransitionID[];
 void create_dl_scale_matrix(s8 pushOp, f32 x, f32 y, f32 z);
+extern s16 gMatStackIndex;
+extern Mat4 gMatStack[32];
+void geo_append_display_list(void *displayList, s16 layer);
+void geo_process_node_and_siblings(struct GraphNode *firstNode);
 
 // The window's aspect ratio when Aspect Ratio is Expand, else 4:3 (src/game/recomp_api.cpp).
 f32 widescreen_aspect(void) {
@@ -561,8 +565,8 @@ RECOMP_PATCH Gfx *geo_intro_gameover_backdrop(s32 state, struct GraphNode *node,
 
 // The border (game_init.c's and area.c's, the game's). The US release keeps the 8 lines at the top and at the bottom of
 // its 240 black (BORDER_HEIGHT in the decomp's include/config.h), hidden on a television by its overscan: the frame's
-// scissor leaves them out, the z-buffer and framebuffer clears skip them, and at the end of each frame
-// draw_screen_borders fills them. Those fills span the screen's width, so RT64 stretched them across the window and
+// scissor leaves them out, the z-buffer and framebuffer clears and a scene's background colour (the act select's
+// white) skip them, and at the end of each frame draw_screen_borders fills them. Those fills span the screen's width, so RT64 stretched them across the window and
 // under Expand they showed as bars at its top and bottom. With Expand the border is none, as on the decomp's PC builds:
 // the 3D's viewport is the whole 240 lines already, so the picture reaches the window's top and bottom. With Original
 // it is the game's 8 and each of these draws as the game does.
@@ -627,6 +631,37 @@ RECOMP_PATCH void draw_screen_borders(void) {
     if (border != 0) {
         gDPFillRectangle(gDisplayListHead++, 0, 0, SCREEN_WIDTH - 1, border - 1);
         gDPFillRectangle(gDisplayListHead++, 0, SCREEN_HEIGHT - border, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+    }
+}
+
+// rendering_graph_node.c's, the game's: a background with no skybox function is a fill of its colour, inside the
+// border.
+RECOMP_PATCH void geo_process_background(struct GraphNodeBackground *node) {
+    Gfx *list = NULL;
+
+    if (node->fnNode.func != NULL) {
+        list = node->fnNode.func(GEO_CONTEXT_RENDER, &node->fnNode.node,
+                                 (struct AllocOnlyPool *) gMatStack[gMatStackIndex]);
+    }
+    if (list != NULL) {
+        geo_append_display_list((void *) VIRTUAL_TO_PHYSICAL(list), node->fnNode.node.flags >> 8);
+    } else if (gCurGraphNodeMasterList != NULL) {
+        s32 border = screen_border();
+        Gfx *gfxStart = alloc_display_list(sizeof(Gfx) * 7);
+        Gfx *gfx = gfxStart;
+
+        gDPPipeSync(gfx++);
+        gDPSetCycleType(gfx++, G_CYC_FILL);
+        gDPSetFillColor(gfx++, node->background);
+        gDPFillRectangle(gfx++, 0, border, SCREEN_WIDTH - 1, SCREEN_HEIGHT - border - 1);
+        gDPPipeSync(gfx++);
+        gDPSetCycleType(gfx++, G_CYC_1CYCLE);
+        gSPEndDisplayList(gfx++);
+
+        geo_append_display_list((void *) VIRTUAL_TO_PHYSICAL(gfxStart), 0);
+    }
+    if (node->fnNode.node.children != NULL) {
+        geo_process_node_and_siblings(node->fnNode.node.children);
     }
 }
 
