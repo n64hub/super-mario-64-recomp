@@ -131,6 +131,12 @@ This repo is the game: its recompilation, the patches over it, the desktop build
     guess (G_EX_ORDER_AUTO), it drew whole in all 21 captures, and in all 20 shots of the page in Chrome and in Firefox.
   - The skybox shows no uncovered edge through a full turn, and the door's star or circle wipe grows in half steps.
     Colour fades (the fade from white into a course) step at 30 as on a console: RT64 blends geometry, not colour.
+  - Cool, Cool Mountain's falling snow moves nearly with the camera, so drawn with the newer frame's vertices under a
+    blended camera each flake swung back and forth by half the camera's step: captured about once a present from a
+    small window (472x336) as Mario fell down the mountain, a near flake read x 395, 348, 391, 342 in four captures in
+    a row, and 11% of the near flakes' positions stood over 10 px off the line through the captures either side. With
+    its vertices blended (envfx_update_snow), a near flake read x 410, 408, 406, 404 as it rose up the screen, and 4%
+    did, flakes the tracking matched wrongly.
 - **Widescreen** (`patches/widescreen.c`, its header lists every place). RT64's Aspect Ratio Expand widens every
   full-screen projection by itself, hor+ about the middle, and stretches a fill or texture rectangle as wide as the
   scissor; the rest is the game's own code at the places the decomp's `GFX_DIMENSIONS` macros mark, reading the aspect
