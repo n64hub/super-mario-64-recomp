@@ -7,6 +7,7 @@
 #include "engine/graph_node.h"
 #include "engine/math_util.h"
 #include "game/area.h"
+#include "game/envfx_snow.h"
 #include "game/game_init.h"
 #include "game/geo_misc.h"
 #include "game/ingame_menu.h"
@@ -56,6 +57,8 @@
 //   sparkle of the star cursor, is a group of its own paired by RT64's guess, since the sparkles change its order.
 // - Warp transitions (render_screen_transition): the shrinking or growing star or circle of a door, a painting or a pipe
 //   is vertices the game moves each frame, so its group blends vertices too.
+// - Falling snow (envfx_update_snow): flakes the game makes again each frame, moving nearly with the camera, so they are
+//   a group of their own that blends vertices too; a flake put back into view this frame is drawn as it is.
 // - The display list pool (select_gfx_pool): each tagged list costs three commands more, so the pool is 4 times the
 //   game's, in the patches' memory. Every frame's list starts with gEXEnable, which the commands above need.
 
@@ -646,6 +649,136 @@ RECOMP_PATCH s32 render_screen_transition(s8 fadeTimer, s8 transType, u8 transTi
     }
     gEXPopMatrixGroup(gDisplayListHead++, G_MTX_MODELVIEW);
     return done;
+}
+
+// The falling snow (envfx_snow.c): a flake is a triangle made again each frame from its position in a cylinder just in
+// front of the camera, and a flake that stays in it moves by 1/1.2 of the cylinder's move, nearly with the camera. Drawn
+// as the game draws it, under its node's matrix with the newer frame's vertices, every flake stood half the camera's step
+// away from both game frames on each frame RT64 draws between them, and back on the next: while Mario ran or the camera
+// turned, the snow flickered between two places. Here its vertices are blended too, in a group of their own, so a flake
+// moves with the camera between two frames. RT64 blends vertices only where there are as many as in the older frame, so
+// the group loads every flake's, gSnowParticleMaxCount of them, and draws the triangles of those the game draws (its
+// count grows by 5 every 64 frames in a course). A flake the game puts back into the cylinder this frame (out of it before
+// its update) is drawn in a group whose id is new every frame instead, where the newer frame has it, not half way from
+// where it was. The game's own list had 6 commands too few once the count grew (it is sized before it grows); this one
+// is sized for every flake.
+#define SNOW_ID 0x534E4F57 // "SNOW"
+#define SNOW_MAX_FLAKES 140 // envfx_init_snow's largest gSnowParticleMaxCount
+
+// The flakes' textures and render modes, and the end restoring them (tiny_bubble_dl_0B006A50, _0B006CD8 and _0B006AB0).
+#define SNOW_DL ((Gfx *) 0x0B006A50)
+#define SNOW_WATER_DL ((Gfx *) 0x0B006CD8)
+#define SNOW_END_DL ((Gfx *) 0x0B006AB0)
+
+extern s16 gSnowParticleMaxCount;
+extern Vec3s gSnowFlakeVertex1;
+extern Vec3s gSnowFlakeVertex2;
+extern Vec3s gSnowFlakeVertex3;
+void envfx_update_snowflake_count(s32 mode, Vec3s marioPos);
+void pos_from_orbit(Vec3s origin, Vec3s result, s16 radius, s16 pitch, s16 yaw);
+s32 envfx_is_snowflake_alive(s32 index, s32 snowCylinderX, s32 snowCylinderY, s32 snowCylinderZ);
+void envfx_update_snow_normal(s32 snowCylinderX, s32 snowCylinderY, s32 snowCylinderZ);
+void envfx_update_snow_water(s32 snowCylinderX, s32 snowCylinderY, s32 snowCylinderZ);
+void envfx_update_snow_blizzard(s32 snowCylinderX, s32 snowCylinderY, s32 snowCylinderZ);
+void append_snowflake_vertex_buffer(Gfx *gfx, s32 index, Vec3s vertex1, Vec3s vertex2, Vec3s vertex3);
+
+static u8 sSnowRespawned[SNOW_MAX_FLAKES];
+
+// The flakes of each batch of 5 that `respawned` picks, with the batch's vertices loaded.
+static Gfx *append_snowflakes(Gfx *gfx, s32 count, s32 respawned, Vec3s vertex1, Vec3s vertex2, Vec3s vertex3) {
+    s32 i, j;
+
+    for (i = 0; i < gSnowParticleMaxCount; i += 5) {
+        s32 any = !respawned;
+        for (j = i; j < i + 5 && j < count; j++) {
+            any |= sSnowRespawned[j];
+        }
+        if (!any) {
+            continue;
+        }
+        append_snowflake_vertex_buffer(gfx++, i, vertex1, vertex2, vertex3);
+        for (j = i; j < i + 5 && j < count; j++) {
+            if (sSnowRespawned[j] == respawned) {
+                gSP1Triangle(gfx++, (j - i) * 3, (j - i) * 3 + 1, (j - i) * 3 + 2, 0);
+            }
+        }
+    }
+    return gfx;
+}
+
+// The game's, with the flakes drawn in the two groups above.
+RECOMP_PATCH Gfx *envfx_update_snow(s32 snowMode, Vec3s marioPos, Vec3s camFrom, Vec3s camTo) {
+    s32 i, count, respawns = 0;
+    s16 radius, pitch, yaw;
+    Vec3s snowCylinderPos;
+    Vec3s vertex1, vertex2, vertex3;
+    Gfx *gfxStart, *gfx;
+    Mtx *mtx = gMatStackFixed[gMatStackIndex];
+
+    if (gSnowParticleMaxCount > SNOW_MAX_FLAKES) {
+        return NULL;
+    }
+    vec3s_copy(vertex1, gSnowFlakeVertex1);
+    vec3s_copy(vertex2, gSnowFlakeVertex2);
+    vec3s_copy(vertex3, gSnowFlakeVertex3);
+
+    // Each group: 2 commands to push it, 1 for its matrix, 6 a batch and 1 to pop it.
+    gfxStart = alloc_display_list(((gSnowParticleMaxCount + 4) / 5 * 6 * 2 + 12) * sizeof(Gfx));
+    gfx = gfxStart;
+    if (gfxStart == NULL) {
+        return NULL;
+    }
+
+    envfx_update_snowflake_count(snowMode, marioPos);
+    count = gSnowParticleCount;
+
+    // Note: to and from are inverted here, so the resulting vector goes towards the camera
+    orbit_from_positions(camTo, camFrom, &radius, &pitch, &yaw);
+
+    // The cylinder: no further than 250 units in front of the camera (500 under water), and no closer than 1.
+    if (radius > (snowMode == ENVFX_SNOW_WATER ? 500 : 250)) {
+        radius -= snowMode == ENVFX_SNOW_WATER ? 500 : 250;
+    } else {
+        radius = 1;
+    }
+    pos_from_orbit(camTo, snowCylinderPos, radius, pitch, yaw);
+
+    for (i = 0; i < count; i++) {
+        sSnowRespawned[i] = !envfx_is_snowflake_alive(i, snowCylinderPos[0], snowCylinderPos[1], snowCylinderPos[2]);
+        respawns += sSnowRespawned[i];
+    }
+
+    switch (snowMode) {
+        case ENVFX_SNOW_NORMAL:
+            envfx_update_snow_normal(snowCylinderPos[0], snowCylinderPos[1], snowCylinderPos[2]);
+            break;
+        case ENVFX_SNOW_WATER:
+            envfx_update_snow_water(snowCylinderPos[0], snowCylinderPos[1], snowCylinderPos[2]);
+            break;
+        case ENVFX_SNOW_BLIZZARD:
+            envfx_update_snow_blizzard(snowCylinderPos[0], snowCylinderPos[1], snowCylinderPos[2]);
+            break;
+    }
+
+    rotate_triangle_vertices(vertex1, vertex2, vertex3, pitch, yaw);
+
+    gSPDisplayList(gfx++, snowMode == ENVFX_SNOW_WATER ? SNOW_WATER_DL : SNOW_DL);
+
+    gEXMatrixGroupTaggedVerts(gfx++, make_id(SNOW_ID, 0, sCutCount), G_MTX_MODELVIEW, G_EX_COMPONENT_INTERPOLATE);
+    gSPMatrix(gfx++, VIRTUAL_TO_PHYSICAL(mtx), G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_NOPUSH);
+    gfx = append_snowflakes(gfx, count, FALSE, vertex1, vertex2, vertex3);
+    gEXPopMatrixGroup(gfx++, G_MTX_MODELVIEW);
+
+    if (respawns != 0) {
+        gEXMatrixGroupTagged(gfx++, make_id(SNOW_ID, gGlobalTimer, sCutCount), G_MTX_MODELVIEW);
+        gSPMatrix(gfx++, VIRTUAL_TO_PHYSICAL(mtx), G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_NOPUSH);
+        gfx = append_snowflakes(gfx, count, TRUE, vertex1, vertex2, vertex3);
+        gEXPopMatrixGroup(gfx++, G_MTX_MODELVIEW);
+    }
+
+    gSPDisplayList(gfx++, SNOW_END_DL);
+    gSPEndDisplayList(gfx++);
+    return gfxStart;
 }
 
 // The dialogs and menus (ingame_menu.c): a box, then a matrix per letter, each a translation multiplied onto the last.
