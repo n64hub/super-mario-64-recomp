@@ -15,3 +15,6 @@ osViSwapBuffer_recomp = 0x8F000024;
 recomp_hires_font_scan = 0x8F000028;
 recomp_get_draw_distance_scale = 0x8F00002C;
 recomp_get_screen_border = 0x8F000030;
+osMotorInit_recomp = 0x8F000034;
+osMotorStart_recomp = 0x8F000038;
+osMotorStop_recomp = 0x8F00003C;

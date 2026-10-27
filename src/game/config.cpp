@@ -111,8 +111,8 @@ void sm64::init_config() {
     }
 
     recompui::config::GeneralTabOptions general_options{};
-    // No Rumble Strength: the USA release has no Rumble Pak code, so the game never rumbles (README, Left out).
-    general_options.has_rumble_strength = false;
+    // Rumble Strength drives Shindou's rumble (patches/rumble.c), 0 keeping the gamepad still as the USA release does.
+    general_options.has_rumble_strength = true;
     general_options.has_gyro_sensitivity = true;
     general_options.has_mouse_sensitivity = true;
     recompui::config::create_general_tab(general_options);
