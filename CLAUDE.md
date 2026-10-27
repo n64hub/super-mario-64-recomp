@@ -40,7 +40,8 @@ This repo is the game: its recompilation, the patches over it, the desktop build
   `tools/release.sh` (its header says how), and published to GitHub Releases with their notes in `releases/`.
 - The scope is the game as it plays, plus what a web page needs (RT64 interpolation to the display's rate, resolution
   Auto), plus the README's Modern enhancements: each an option with an Original value that plays as the console does,
-  none changing how the game plays. No camera changes, cheats or 60 fps logic. USA 1.0 only.
+  none changing how the game plays. No camera changes, cheats or 60 fps logic. USA 1.0 only, with one thing
+  from the Japanese Shindou edition: its rumble, as an enhancement.
 - Write for a stranger, in the present tense: nothing about a contributor's machine, servers, paths or accounts, and
   nothing about where anyone keeps ROMs.
 - GPL-3.0, as the recompilations it follows.
@@ -170,3 +171,10 @@ This repo is the game: its recompilation, the patches over it, the desktop build
   the side of a dialog letter. The clamp changes those shaders' sampler flags, so the page's shader list holds the
   text's shaders both ways (`src/rt64_shaders.txt`'s header). A pack made with another scaler or scale needs a new
   `pack_version`.
+- **Rumble** (`patches/rumble.c`, its header says how): Shindou's rumble code over the US game. `patches/rumble/` holds
+  each US function that Shindou rumbles in, 92 of them, copied from the decomp with its `#if ENABLE_RUMBLE` lines
+  compiled in and nothing else changed but the narrow arguments (four of them). `rumble.h` turns ENABLE_RUMBLE on only
+  after a file's headers, since it also gives `struct Controller` a field the US game doesn't have. The motor is the
+  runtime's `osMotorStart` and `osMotorStop`, for which `main.cpp` reports a Rumble Pak in controller 1, and recompinput
+  drives the gamepad at the General tab's Rumble Strength. A patch elsewhere of one of those 92 functions takes its
+  rumble lines with it and leaves `patches/rumble/`.

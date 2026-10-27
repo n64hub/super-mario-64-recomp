@@ -93,7 +93,8 @@ ultramodern::input::connected_device_info_t get_connected_device_info(int contro
     if (recompinput::players::is_single_player_mode() || recompinput::players::get_player_is_assigned(controller_num)) {
         return ultramodern::input::connected_device_info_t{
             .connected_device = ultramodern::input::Device::Controller,
-            .connected_pak = ultramodern::input::Pak::None,
+            // A Rumble Pak, so that Shindou's rumble (patches/rumble.c) finds one with osMotorInit.
+            .connected_pak = ultramodern::input::Pak::RumblePak,
         };
     }
 

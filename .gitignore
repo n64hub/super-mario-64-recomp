@@ -17,6 +17,8 @@
 /out/
 /patches/*.o
 /patches/*.d
+/patches/rumble/*.o
+/patches/rumble/*.d
 /patches/patches.map
 *.nrm
 .vs/

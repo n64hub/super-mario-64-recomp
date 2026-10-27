@@ -18,6 +18,9 @@
 #define osPiStartDma osPiStartDma_recomp
 #define osInvalDCache osInvalDCache_recomp
 #define osViSwapBuffer osViSwapBuffer_recomp
+#define osMotorInit osMotorInit_recomp
+#define osMotorStart osMotorStart_recomp
+#define osMotorStop osMotorStop_recomp
 
 #include <ultra64.h>
 #include "macros.h"

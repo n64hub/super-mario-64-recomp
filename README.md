@@ -24,8 +24,8 @@ from your own ROM through its Load ROM ([docs/web.md](docs/web.md)).
 
 ## Modern enhancements
 
-Every one of these is an option on the settings menu's Graphics tab, and every option has an Original value that runs
-the game as it shipped.
+Every one of these is an option on the settings menu's Graphics tab (rumble's is on its General tab), and every option
+has an Original value that runs the game as it shipped.
 
 - **High resolution**: renders at the window's size, up to 4K and beyond, instead of 320×240, with 2× MSAA. The 3D,
   the fades and the wipes are sharp at any size.
@@ -59,6 +59,11 @@ the game as it shipped.
   as a ring of coins or a group of Goombas, still appear where they did.
 - **No frame copies to RAM**: each frame stays on the GPU instead of also being drawn again at 320×240 and copied back
   into the console's memory, which the game never reads.
+- **Rumble**: a gamepad rumbles as a Rumble Pak does in the Japanese *Shindou* edition, the later release that added
+  it (the USA release has no rumble at all): a ground pound, a long or triple jump's landing, a hit, a star, a coin
+  worth more than one, the cannon, a pipe, Bowser's throw, nearly drowning, the menus' choices and the rest, about 130
+  places, each with Shindou's own timing and strength. It is Shindou's rumble code, run beside the USA game's, at the
+  General tab's Rumble Strength; 0 turns it off. On the web page it rumbles through the browser's Gamepad API.
 
 Settings are saved as JSON in `%LOCALAPPDATA%\SuperMario64Recompiled\` (`~/.config/SuperMario64Recompiled/` on
 Linux), or in the working directory when it holds a `portable.txt`, so they can also be edited by hand while the game
@@ -76,14 +81,13 @@ is closed. For the game exactly as it shipped, set every Original value:
 | Model detail | Level of Detail | `graphics.json` `level_of_detail` | `"High"` (4× the distances; `"Highest"`: always the most detailed) | `"Original"` |
 | Draw distance | Draw Distance | `graphics.json` `draw_distance` | `"High"` (4× the distances) | `"Original"` |
 | No frame copies to RAM | Copy Frames to RAM | `graphics.json` `copy_frames_to_ram` | `"Off"` (takes effect on the next start) | `"Original"` (every frame copied) |
+| Rumble | Rumble Strength | `general.json` `rumble_strength` | `25` (percent) | `0` (none) |
 
 Left out:
 
 - **60 fps game logic**, because it would change how the game plays. The game's movement, physics, timers and
   animations are all counted in its 30 frames a second; running them at 60 is a port of every one of them, not an
   option.
-- **Rumble.** The USA release has no Rumble Pak support (rumble came with the later Japanese *Shindou* edition), so
-  the game never rumbles and the settings have no Rumble Strength.
 - **Cheats.** None are built in; a code mod (Mods, below) can add them.
 
 Not options, because they don't change the game: the keyboard and gamepad layouts (Controls), which are RecompFrontend's

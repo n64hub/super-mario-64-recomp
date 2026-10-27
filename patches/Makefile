@@ -1,4 +1,4 @@
-# The patches (*.c here), compiled for MIPS against the decomp's headers (lib/sm64) and linked into patches.elf, which
+# The patches (*.c here and in rumble/), compiled for MIPS against the decomp's headers (lib/sm64) and linked into patches.elf, which
 # N64Recomp recompiles with patches.toml (CMakeLists.txt's PatchesLib). CC is a clang with a MIPS backend and LD
 # ld.lld (on Windows tools/env.sh's MIPS_CC and MIPS_LD).
 TARGET = patches.elf
@@ -14,7 +14,7 @@ CPPFLAGS := -nostdinc -D_LANGUAGE_C -DMIPS -DTARGET_N64 -DVERSION_US -DF3D_OLD -
 			-I ../lib/sm64/include -I ../lib/sm64/include/libc -I ../lib/sm64/src -I ../lib/sm64 -I ../lib/rt64/include
 LDFLAGS  := -nostdlib -T patches.ld -T syms.ld -Map patches.map --unresolved-symbols=ignore-all --emit-relocs
 
-C_SRCS := $(wildcard *.c)
+C_SRCS := $(wildcard *.c) $(wildcard rumble/*.c)
 C_OBJS := $(C_SRCS:.c=.o)
 C_DEPS := $(C_SRCS:.c=.d)
 
