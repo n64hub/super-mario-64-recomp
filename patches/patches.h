@@ -31,6 +31,7 @@ f32 recomp_get_hud_aspect_ratio(f32 original);
 s32 recomp_get_reduced_input_lag(void);
 s32 recomp_get_lod_divisor(void);
 s32 recomp_get_draw_distance_scale(void);
+s32 recomp_get_screen_border(s32 original);
 void recomp_hires_font_scan(Gfx *list);
 
 // shader_survey.c, called once a frame from display_and_vsync.

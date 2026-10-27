@@ -9,6 +9,7 @@
 #include "game/geo_misc.h"
 #include "game/level_update.h"
 #include "game/hud.h"
+#include "game/mario_actions_cutscene.h"
 #include "game/ingame_menu.h"
 #include "game/memory.h"
 #include "game/print.h"
@@ -33,9 +34,11 @@
 //   and Bowser wipes starting and ending at a radius that covers it, and the pause screen's red coins at the HUD's edge.
 // - The skybox: interpolation.c draws as many columns of its tiles as the width needs (sky_columns below).
 // - The title screen's and the game over screen's tiled backdrop, carried out to the window's edges with more columns.
+// - The border: the 8 black lines the game keeps at the top and the bottom of its 240 (screen_border below), which RT64
+//   stretched into bars across the window, gone, so the picture fills it from top to bottom.
 //
 // At 4:3, or with Aspect Ratio Original, every one of these draws as the game does: the aspect is 4:3 and each check
-// below falls through to the game's own code.
+// below falls through to the game's own code. The border goes with Expand at any window's shape, 4:3 too.
 
 #define ASPECT_4_3 (4.0f / 3.0f)
 
@@ -56,11 +59,21 @@ void render_hud_tex_lut(s32 x, s32 y, u8 *texture);
 void render_hud_small_tex_lut(s32 x, s32 y, u8 *texture);
 extern s16 sCameraHUDStatus;
 extern u8 gWarpTransRed, gWarpTransGreen, gWarpTransBlue;
+extern s16 gWarpTransDelay;
+extern u32 gFBSetColor;
+extern u32 gWarpTransFBSetColor;
+extern Vp *D_8032CE74;
+extern Vp *D_8032CE78;
+extern Vp D_8032CF00;
 void set_warp_transition_rgb(u8 red, u8 green, u8 blue);
 void print_animated_red_coin(s16 x, s16 y);
 extern s8 gRedCoinsCollected;
 extern void *sTextureTransitionID[];
 void create_dl_scale_matrix(s8 pushOp, f32 x, f32 y, f32 z);
+extern s16 gMatStackIndex;
+extern Mat4 gMatStack[32];
+void geo_append_display_list(void *displayList, s16 layer);
+void geo_process_node_and_siblings(struct GraphNode *firstNode);
 
 // The window's aspect ratio when Aspect Ratio is Expand, else 4:3 (src/game/recomp_api.cpp).
 f32 widescreen_aspect(void) {
@@ -548,4 +561,163 @@ RECOMP_PATCH Gfx *geo_intro_gameover_backdrop(s32 state, struct GraphNode *node,
     }
     node->flags = (node->flags & 0xFF) | (LAYER_OPAQUE << 8);
     return draw_backdrop(gameOverBackgroundTable);
+}
+
+// The border (game_init.c's and area.c's, the game's). The US release keeps the 8 lines at the top and at the bottom of
+// its 240 black (BORDER_HEIGHT in the decomp's include/config.h), hidden on a television by its overscan: the frame's
+// scissor leaves them out, the z-buffer and framebuffer clears and a scene's background colour (the act select's
+// white) skip them, and at the end of each frame draw_screen_borders fills them. Those fills span the screen's width, so RT64 stretched them across the window and
+// under Expand they showed as bars at its top and bottom. With Expand the border is none, as on the decomp's PC builds:
+// the 3D's viewport is the whole 240 lines already, so the picture reaches the window's top and bottom. With Original
+// it is the game's 8 and each of these draws as the game does.
+#define BORDER_HEIGHT_US 8
+
+static s32 screen_border(void) {
+    return recomp_get_screen_border(BORDER_HEIGHT_US);
+}
+
+RECOMP_PATCH void init_z_buffer(void) {
+    s32 border = screen_border();
+
+    gDPPipeSync(gDisplayListHead++);
+
+    gDPSetDepthSource(gDisplayListHead++, G_ZS_PIXEL);
+    gDPSetDepthImage(gDisplayListHead++, gPhysicalZBuffer);
+
+    gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH, gPhysicalZBuffer);
+    gDPSetFillColor(gDisplayListHead++, GPACK_ZDZ(G_MAXFBZ, 0) << 16 | GPACK_ZDZ(G_MAXFBZ, 0));
+
+    gDPFillRectangle(gDisplayListHead++, 0, border, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1 - border);
+}
+
+RECOMP_PATCH void select_framebuffer(void) {
+    s32 border = screen_border();
+
+    gDPPipeSync(gDisplayListHead++);
+
+    gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
+    gDPSetColorImage(gDisplayListHead++, G_IM_FMT_RGBA, G_IM_SIZ_16b, SCREEN_WIDTH,
+                     gPhysicalFramebuffers[sRenderingFramebuffer]);
+    gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, border, SCREEN_WIDTH, SCREEN_HEIGHT - border);
+}
+
+RECOMP_PATCH void clear_framebuffer(s32 color) {
+    s32 border = screen_border();
+
+    gDPPipeSync(gDisplayListHead++);
+
+    gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
+    gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
+
+    gDPSetFillColor(gDisplayListHead++, color);
+    gDPFillRectangle(gDisplayListHead++, 0, border, SCREEN_WIDTH - 1, SCREEN_HEIGHT - border - 1);
+
+    gDPPipeSync(gDisplayListHead++);
+
+    gDPSetCycleType(gDisplayListHead++, G_CYC_1CYCLE);
+}
+
+RECOMP_PATCH void draw_screen_borders(void) {
+    s32 border = screen_border();
+
+    gDPPipeSync(gDisplayListHead++);
+
+    gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
+    gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
+
+    gDPSetFillColor(gDisplayListHead++, GPACK_RGBA5551(0, 0, 0, 0) << 16 | GPACK_RGBA5551(0, 0, 0, 0));
+
+    if (border != 0) {
+        gDPFillRectangle(gDisplayListHead++, 0, 0, SCREEN_WIDTH - 1, border - 1);
+        gDPFillRectangle(gDisplayListHead++, 0, SCREEN_HEIGHT - border, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+    }
+}
+
+// rendering_graph_node.c's, the game's: a background with no skybox function is a fill of its colour, inside the
+// border.
+RECOMP_PATCH void geo_process_background(struct GraphNodeBackground *node) {
+    Gfx *list = NULL;
+
+    if (node->fnNode.func != NULL) {
+        list = node->fnNode.func(GEO_CONTEXT_RENDER, &node->fnNode.node,
+                                 (struct AllocOnlyPool *) gMatStack[gMatStackIndex]);
+    }
+    if (list != NULL) {
+        geo_append_display_list((void *) VIRTUAL_TO_PHYSICAL(list), node->fnNode.node.flags >> 8);
+    } else if (gCurGraphNodeMasterList != NULL) {
+        s32 border = screen_border();
+        Gfx *gfxStart = alloc_display_list(sizeof(Gfx) * 7);
+        Gfx *gfx = gfxStart;
+
+        gDPPipeSync(gfx++);
+        gDPSetCycleType(gfx++, G_CYC_FILL);
+        gDPSetFillColor(gfx++, node->background);
+        gDPFillRectangle(gfx++, 0, border, SCREEN_WIDTH - 1, SCREEN_HEIGHT - border - 1);
+        gDPPipeSync(gfx++);
+        gDPSetCycleType(gfx++, G_CYC_1CYCLE);
+        gSPEndDisplayList(gfx++);
+
+        geo_append_display_list((void *) VIRTUAL_TO_PHYSICAL(gfxStart), 0);
+    }
+    if (node->fnNode.node.children != NULL) {
+        geo_process_node_and_siblings(node->fnNode.node.children);
+    }
+}
+
+// area.c's, the game's, with the border's scissors.
+RECOMP_PATCH void render_game(void) {
+    s32 border = screen_border();
+
+    if (gCurrentArea != NULL && !gWarpTransition.pauseRendering) {
+        geo_process_root(gCurrentArea->unk04, D_8032CE74, D_8032CE78, gFBSetColor);
+
+        gSPViewport(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(&D_8032CF00));
+
+        gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, border, SCREEN_WIDTH, SCREEN_HEIGHT - border);
+        render_hud();
+
+        gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        render_text_labels();
+        do_cutscene_handler();
+        print_displaying_credits_entry();
+
+        gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, border, SCREEN_WIDTH, SCREEN_HEIGHT - border);
+        gMenuOptSelectIndex = render_menus_and_dialogs();
+        if (gMenuOptSelectIndex != MENU_OPT_NONE) {
+            gSaveOptSelectIndex = gMenuOptSelectIndex;
+        }
+
+        if (D_8032CE78 != NULL) {
+            make_viewport_clip_rect(D_8032CE78);
+        } else {
+            gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, border, SCREEN_WIDTH, SCREEN_HEIGHT - border);
+        }
+
+        if (gWarpTransition.isActive) {
+            if (gWarpTransDelay == 0) {
+                gWarpTransition.isActive = !render_screen_transition(0, gWarpTransition.type, gWarpTransition.time,
+                                                                     &gWarpTransition.data);
+                if (!gWarpTransition.isActive) {
+                    if (gWarpTransition.type & 1) {
+                        gWarpTransition.pauseRendering = TRUE;
+                    } else {
+                        set_warp_transition_rgb(0, 0, 0);
+                    }
+                }
+            } else {
+                gWarpTransDelay--;
+            }
+        }
+    } else {
+        render_text_labels();
+        if (D_8032CE78 != NULL) {
+            clear_viewport(D_8032CE78, gWarpTransFBSetColor);
+        } else {
+            clear_framebuffer(gWarpTransFBSetColor);
+        }
+    }
+
+    D_8032CE74 = NULL;
+    D_8032CE78 = NULL;
 }

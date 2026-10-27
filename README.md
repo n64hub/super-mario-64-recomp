@@ -44,7 +44,9 @@ the game as it shipped.
   sides), and the game keeps up at the sides: objects there are drawn instead of culled as off screen, the sky has
   enough columns, the HUD's lives, stars, timer and camera icon move out to the window's edges, the fades, the pause
   screen's shade and the cannon's black cover the whole window, the star and circle wipes start and end beyond its
-  corners, and the title screen's tiled backdrop reaches its edges. The dialogs, the menus and the coin counter stay
+  corners, and the title screen's tiled backdrop reaches its edges. The black lines the game keeps at the top and the
+  bottom of the screen (8 of its 240, hidden on a television by its overscan) are gone, so the picture fills the
+  window from top to bottom; Original keeps them. The dialogs, the menus and the coin counter stay
   centred, as the game centres them. The file select keeps its 4:3 box.
 - **Model detail**: models keep their detailed versions four times as far out. Mario switches to a plainer model at
   600 and 1600 units while he moves, which at the camera's usual distance means the middle one: with this, it is the
@@ -75,13 +77,31 @@ is closed. For the game exactly as it shipped, set every Original value:
 | Draw distance | Draw Distance | `graphics.json` `draw_distance` | `"High"` (4× the distances) | `"Original"` |
 | No frame copies to RAM | Copy Frames to RAM | `graphics.json` `copy_frames_to_ram` | `"Off"` (takes effect on the next start) | `"Original"` (every frame copied) |
 
-Left out, because it would change how the game plays:
+Left out:
 
-- **60 fps game logic.** The game's movement, physics, timers and animations are all counted in its 30 frames a
-  second; running them at 60 is a port of every one of them, not an option.
+- **60 fps game logic**, because it would change how the game plays. The game's movement, physics, timers and
+  animations are all counted in its 30 frames a second; running them at 60 is a port of every one of them, not an
+  option.
+- **Rumble.** The USA release has no Rumble Pak support (rumble came with the later Japanese *Shindou* edition), so
+  the game never rumbles and the settings have no Rumble Strength.
+- **Cheats.** None are built in; a code mod (Mods, below) can add them.
 
 Not options, because they don't change the game: the keyboard and gamepad layouts (Controls), which are RecompFrontend's
 defaults: WASD or the left stick for the stick, the arrows or the right stick for the C buttons.
+
+## Mods
+
+The Mods tab lists what is in the `mods` folder in the settings' folder (above), and turns each on or off. It takes
+two kinds:
+
+- **Texture packs** made for RT64 (`.rtz`, a zip holding an `rt64.json`): RT64 finds a texture by a hash of what the
+  game loads, so a pack made with RT64's texture tools for this ROM works. Packs for other kinds of renderer do not
+  load: the PC ports' (sm64ex, Render96, which replace the PNG files of their build by name) and GLideN64's or Rice's
+  (`.hts`, `.htc`, folders of PNGs named by their hashes).
+- **Code mods** (`.nrm`) built for this recomp with N64Recomp's mod tool against `syms/`, for the game ID `sm64`. A
+  mod made for another recomp (Zelda64Recomp's, BanjoRecomp's) is another game's and doesn't load.
+
+The web page takes no mods (docs/web.md).
 
 ## Getting it
 
