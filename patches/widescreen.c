@@ -392,10 +392,12 @@ RECOMP_PATCH void play_transition(s16 transType, s16 time, u8 red, u8 green, u8 
 }
 
 // screen_transition.c, the game's: the view from inside a cannon is a circle in black, and past 4:3 the black is
-// carried out to the window's edges.
+// carried out to the window's edges. The list is 22 commands: the game's F3D makes each gSP2Triangles two. Allocated
+// below the vertices (alloc_display_list takes from the pool's end down), a list counted short wrote its end over
+// vertex 0, and every triangle with that corner went: the circle and half the left side's black.
 RECOMP_PATCH Gfx *render_cannon_circle_base(void) {
     Vtx *verts = alloc_display_list(8 * sizeof(*verts));
-    Gfx *dlist = alloc_display_list(20 * sizeof(*dlist));
+    Gfx *dlist = alloc_display_list(22 * sizeof(*dlist));
     Gfx *g = dlist;
     f32 aspect = widescreen_aspect();
 
