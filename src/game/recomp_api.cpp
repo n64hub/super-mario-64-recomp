@@ -68,6 +68,15 @@ extern "C" void recomp_get_hud_aspect_ratio(uint8_t* rdram, recomp_context* ctx)
     _return(ctx, aspect);
 }
 
+// recomp_get_screen_border(original): how many lines at the top and at the bottom of the screen the game keeps black,
+// the game's own (the argument) with Aspect Ratio Original and none with Expand, where the picture fills the window
+// (patches/widescreen.c).
+extern "C" void recomp_get_screen_border(uint8_t* rdram, recomp_context* ctx) {
+    s32 original = _arg<0, s32>(rdram, ctx);
+    bool expand = ultramodern::renderer::get_graphics_config().ar_option == ultramodern::renderer::AspectRatio::Expand;
+    _return<s32>(ctx, expand ? 0 : original);
+}
+
 // recomp_get_reduced_input_lag(): whether Input Lag is Reduced (patches/enhancements.c).
 extern "C" void recomp_get_reduced_input_lag(uint8_t* rdram, recomp_context* ctx) {
     _return<s32>(ctx, sm64::reduced_input_lag() ? 1 : 0);
