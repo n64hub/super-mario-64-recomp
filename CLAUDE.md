@@ -31,9 +31,10 @@ This repo is the game: its recompilation, the patches over it, the desktop build
 
 ## Rules
 
-- No ROMs, ROM-derived assets or extracted game data in git, CI or PRs (`tools/ci/check_repo.py` checks). Nothing
-  from the decomp's `assets/` or its build is committed but `syms/`. The launcher's art is text only (`icons/`): no
-  logo, character or picture from the game.
+- No ROMs, ROM-derived assets or extracted game data in git, CI or PRs (`tools/ci/check_repo.py` checks). Nothing from
+  the decomp's `assets/` or its build is committed but `syms/`. The icon (`icons/icon.svg`, the launcher's thumbnail and
+  the program's icon by `tools/icon.py`) is drawn for the project from plain shapes: no logo, character or picture from
+  the game.
 - The decomp is built only where the ROM is, never in CI.
 - The page is built where the ROM is and published to this repo's Pages (`gh-pages`) by N64Recomp-browser's
   `tools/publish_pages.sh` (its `docs/publishing.md`), its `.data` holding nothing from the ROM. The desktop releases are built where the ROM is too, by
