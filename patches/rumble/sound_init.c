@@ -27,7 +27,7 @@ void play_menu_sounds_extra(s32 a, void *b);
 #include "../rumble.h"
 
 RECOMP_PATCH void play_menu_sounds(s32 soundMenuFlagsWord) {
-    // Narrowed here: IDO narrows a char or short argument in the function that takes it (CLAUDE.md, Narrow arguments).
+    // Narrowed here: IDO narrows a char or short argument in the function that takes it (docs/architecture.md, Narrow arguments).
     s16 soundMenuFlags = (s16) soundMenuFlagsWord;
     if (soundMenuFlags & SOUND_MENU_FLAG_HANDAPPEAR) {
         play_sound(SOUND_MENU_HAND_APPEAR, gGlobalSoundSource);

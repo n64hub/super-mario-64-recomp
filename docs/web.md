@@ -43,7 +43,7 @@ costs the page.
 
 Serve `build/web` over HTTP from localhost (any static server; the page brings its own `coi_serviceworker.js` for the
 headers threads need) and open `SuperMario64Recompiled.html` in Chrome or Firefox with WebGPU, then Load ROM and Start
-Game. The keyboard is the desktop's (CLAUDE.md, Input): WASD the stick, Space A, Left Shift B, Enter Start, the arrows
+Game. The keyboard is the desktop's (docs/architecture.md, Input): WASD the stick, Space A, Left Shift B, Enter Start, the arrows
 the C buttons.
 
 ## The survey
@@ -137,7 +137,7 @@ build. What it found:
 
 ## Frame rate
 
-The game makes 30 frames a second, two VIs a frame (CLAUDE.md, The game's own pacing), and RT64 interpolates to the
+The game makes 30 frames a second, two VIs a frame (docs/architecture.md, The game's own pacing), and RT64 interpolates to the
 display's rate (Framerate Display). On the page, uncapped in headless Chrome on a desktop GPU at 1256x645, an idle host,
 the regular plan presented 347.7 a second, held by the uncapped rate (360), and the game made 30.0 frames a second over
 its minute in Bob-omb Battlefield; in Firefox, paced to its 60 animation frames a second, 60.6 presents and 30.0 frames.
