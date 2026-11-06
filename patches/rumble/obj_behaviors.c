@@ -45,7 +45,7 @@ void bhv_treasure_chest_ship_loop(void);
 #include "../rumble.h"
 
 RECOMP_PATCH void controllable_platform_hit_wall(s32 sp1BWord) {
-    // Narrowed here: IDO narrows a char or short argument in the function that takes it (CLAUDE.md, Narrow arguments).
+    // Narrowed here: IDO narrows a char or short argument in the function that takes it (docs/architecture.md, Narrow arguments).
     s8 sp1B = (s8) sp1BWord;
     o->oControllablePlatformUnkF8 = sp1B;
     o->oTimer = 0;

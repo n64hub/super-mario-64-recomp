@@ -71,7 +71,7 @@ void bhv_menu_button_manager_loop(void);
 #include "../rumble.h"
 
 RECOMP_PATCH void exit_score_file_to_score_menu(struct Object *scoreFileButton, s32 scoreButtonIDWord) {
-    // Narrowed here: IDO narrows a char or short argument in the function that takes it (CLAUDE.md, Narrow arguments).
+    // Narrowed here: IDO narrows a char or short argument in the function that takes it (docs/architecture.md, Narrow arguments).
     s8 scoreButtonID = (s8) scoreButtonIDWord;
     // Begin exit
     if (scoreFileButton->oMenuButtonState == MENU_BUTTON_STATE_FULLSCREEN
@@ -496,7 +496,7 @@ RECOMP_PATCH void check_main_menu_clicked_buttons(void) {
 }
 
 RECOMP_PATCH void print_erase_menu_prompt(s32 xWord, s32 yWord) {
-    // Narrowed here: IDO narrows a char or short argument in the function that takes it (CLAUDE.md, Narrow arguments).
+    // Narrowed here: IDO narrows a char or short argument in the function that takes it (docs/architecture.md, Narrow arguments).
     s16 x = (s16) xWord;
     s16 y = (s16) yWord;
     s16 colorTransTimer = gGlobalTimer * (1 << 12);
