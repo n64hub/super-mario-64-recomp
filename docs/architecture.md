@@ -44,7 +44,10 @@ finding that explains the game's code goes here or beside that code.
 - **Input.** RecompFrontend's default bindings, nothing of the game's own. Keyboard: WASD the stick, Space A, Left
   Shift B, Q Z, R R, E L, Enter Start, the arrows the C buttons. A gamepad: the left stick, the south button A, the
   west one B, the left trigger Z, the right trigger R, the left bumper L, Start, and the right stick for the C
-  buttons (or north, east, the right stick's click and the right bumper for C left, right, up and down).
+  buttons (or north, east, the right stick's click and the right bumper for C left, right, up and down). The game
+  is played by one player: Mario reads the first controller found, and the second that `init_controllers` fills
+  (`gPlayer2Controller`) is read by nothing, so there is no second port to give a pad to and N64Recomp-browser's
+  docs/new-recomp.md item 3 (each controller its own port) doesn't apply.
 - **Testing without the speakers.** `main.cpp` asks SDL for WASAPI only when `SDL_AUDIODRIVER` isn't set, so a test
   records the game's sound with SDL's disk driver (`SDL_AUDIODRIVER=disk`, `SDL_DISKAUDIOFILE=<file>`: F32 stereo at
   48 kHz). On Windows that driver runs slow, about 0.92 of real time: it sleeps 5 ms per 5.33 ms buffer, and the
