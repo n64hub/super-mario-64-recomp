@@ -1,0 +1,1 @@
+- The title screen and the game over screen no longer show a flickering line (dark red at times) along the window's top edge, and a colour fade or the view from inside a cannon now reaches the window's very top and right edge.

@@ -97,6 +97,38 @@ s32 widescreen_sky_columns(f32 scrollX, s32 *firstCol) {
 #define LEFT_EDGE(aspect) (SCREEN_WIDTH / 2 - SCREEN_HEIGHT / 2 * (aspect))
 #define RIGHT_EDGE(aspect) (SCREEN_WIDTH / 2 + SCREEN_HEIGHT / 2 * (aspect))
 
+// The game's full-screen projection (segment2.c's matrix_fullscreen, which dl_proj_mtx_fullscreen loads) scales x by
+// 65536 * 2 / 320 = 409 and y by 65536 * 2 / 240 = 546, integer divisions short of 2 / 320 and 2 / 240, so geometry
+// that ends at x 320 ends 0.47 of a pixel inside the screen's right edge and at y 240 a quarter of a pixel below its
+// top (0.06, rounded by the RSP). At 240 lines that still covers the last line's middle and nothing shows. Drawn at
+// the window's size a line is several rows, and the rows above or beside the edge kept whatever an older frame left
+// there: the title's backdrop left the window's top row (two on a 2000-row page) to an older frame of a triple-
+// buffered framebuffer, a dark red row of the head's zoom-in flickering at a third of the frames, black on the page.
+// This is that projection scaled by 410 and 547, so 320 and 240 land just past the edges, where the scissor ends
+// them, and 0 lands where the game's does. fullscreen_projection writes it, with the game's list's other commands,
+// in place of a gSPDisplayList of dl_proj_mtx_fullscreen: 5 commands.
+static const Mtx sFullscreenToEdges = { {
+    { 0x00000000, 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0xFFFF0000, 0xFFFFFFFF, 0xFFFF0001 },
+    { 410 << 16, 0x00000000, 547, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x00000000 },
+} };
+static const Mtx sIdentity = { {
+    { 0x00010000, 0x00000000, 0x00000001, 0x00000000 },
+    { 0x00000000, 0x00010000, 0x00000000, 0x00000001 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x00000000 },
+} };
+
+static Gfx *fullscreen_projection(Gfx *g) {
+    gDPPipeSync(g++);
+    gSPClearGeometryMode(g++, G_LIGHTING);
+    gSPMatrix(g++, VIRTUAL_TO_PHYSICAL(&sFullscreenToEdges), G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
+    gSPMatrix(g++, VIRTUAL_TO_PHYSICAL(&sIdentity), G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_NOPUSH);
+    gSPPerspNormalize(g++, 0xFFFF);
+    return g;
+}
+
 // rendering_graph_node.c: the game's, with the screen's half width widened by the aspect ratio as the decomp's
 // widescreen build does. The game's own check uses the vertical field of view as the horizontal one (its @bug), so
 // at 4:3 objects already pop in a little inside the screen's edge; past 4:3 the whole check scales with the width.
@@ -323,7 +355,8 @@ RECOMP_PATCH void render_text_labels(void) {
     sTextLabelsCount = 0;
 }
 
-// screen_transition.c: the colour fades, as wide as the screen.
+// screen_transition.c: the colour fades, as wide as the screen and a unit past its top and right edge, which the
+// game's projection leaves a fraction of a pixel short of (sFullscreenToEdges).
 RECOMP_PATCH Vtx *vertex_transition_color(struct WarpTransitionData *transData, u8 alpha) {
     Vtx *verts = alloc_display_list(4 * sizeof(*verts));
     u8 r = transData->red;
@@ -331,13 +364,13 @@ RECOMP_PATCH Vtx *vertex_transition_color(struct WarpTransitionData *transData, 
     u8 b = transData->blue;
     f32 aspect = widescreen_aspect();
     s16 left = aspect > ASPECT_4_3 ? (s16) (LEFT_EDGE(aspect) - 1.0f) : 0;
-    s16 right = aspect > ASPECT_4_3 ? (s16) (RIGHT_EDGE(aspect) + 1.0f) : SCREEN_WIDTH;
+    s16 right = aspect > ASPECT_4_3 ? (s16) (RIGHT_EDGE(aspect) + 1.0f) : SCREEN_WIDTH + 1;
 
     if (verts != NULL) {
         make_vertex(verts, 0, left, 0, -1, 0, 0, r, g, b, alpha);
         make_vertex(verts, 1, right, 0, -1, 0, 0, r, g, b, alpha);
-        make_vertex(verts, 2, right, SCREEN_HEIGHT, -1, 0, 0, r, g, b, alpha);
-        make_vertex(verts, 3, left, SCREEN_HEIGHT, -1, 0, 0, r, g, b, alpha);
+        make_vertex(verts, 2, right, SCREEN_HEIGHT + 1, -1, 0, 0, r, g, b, alpha);
+        make_vertex(verts, 3, left, SCREEN_HEIGHT + 1, -1, 0, 0, r, g, b, alpha);
     }
     return verts;
 }
@@ -394,10 +427,11 @@ RECOMP_PATCH void play_transition(s16 transType, s16 time, u8 red, u8 green, u8 
 // screen_transition.c, the game's: the view from inside a cannon is a circle in black, and past 4:3 the black is
 // carried out to the window's edges. The list is 22 commands: the game's F3D makes each gSP2Triangles two. Allocated
 // below the vertices (alloc_display_list takes from the pool's end down), a list counted short wrote its end over
-// vertex 0, and every triangle with that corner went: the circle and half the left side's black.
+// vertex 0, and every triangle with that corner went: the circle and half the left side's black. Its projection is
+// fullscreen_projection's, which reaches the screen's top and right edge, so 26.
 RECOMP_PATCH Gfx *render_cannon_circle_base(void) {
     Vtx *verts = alloc_display_list(8 * sizeof(*verts));
-    Gfx *dlist = alloc_display_list(22 * sizeof(*dlist));
+    Gfx *dlist = alloc_display_list(26 * sizeof(*dlist));
     Gfx *g = dlist;
     f32 aspect = widescreen_aspect();
 
@@ -414,7 +448,7 @@ RECOMP_PATCH Gfx *render_cannon_circle_base(void) {
     make_vertex(verts, 6, RIGHT_EDGE(aspect) + 1.0f, SCREEN_HEIGHT, -1, 0, 0, 0, 0, 0, 255);
     make_vertex(verts, 7, LEFT_EDGE(aspect) - 1.0f, SCREEN_HEIGHT, -1, 0, 0, 0, 0, 0, 255);
 
-    gSPDisplayList(g++, dl_proj_mtx_fullscreen);
+    g = fullscreen_projection(g);
     gDPSetCombineMode(g++, G_CC_MODULATEIDECALA, G_CC_MODULATEIDECALA);
     gDPSetTextureFilter(g++, G_TF_BILERP);
     gDPLoadTextureBlock(g++, sTextureTransitionID[TEX_TRANS_CIRCLE], G_IM_FMT_IA, G_IM_SIZ_8b, 32, 64, 0,
@@ -464,7 +498,8 @@ RECOMP_PATCH void render_pause_red_coins(void) {
 // intro_geo.c: the tiled backdrop behind Mario's face on the title screen and the game over screen, 4 columns of 80
 // units and 3 rows. Past 4:3 more columns are drawn each side, each a copy of the edge tile of its row (on the game
 // over screen they turn into the title's along with it). The game's intro_backdrop_one_image places tile <index> at
-// xCoords[index], so each extra tile is drawn with that entry moved for the call.
+// xCoords[index], so each extra tile is drawn with that entry moved for the call. The top row's tiles end at y 240,
+// so the projection is fullscreen_projection's, which reaches the window's top row.
 struct GraphNodeMore {
     struct GraphNode node;
     void *todo;
@@ -495,12 +530,12 @@ static Gfx *draw_backdrop(s8 *backgroundTable) {
         sideColumns = (s32) ((SCREEN_HEIGHT / 2 * aspect - SCREEN_WIDTH / 2) / 80.0f) + 1;
     }
 
-    dl = alloc_display_list((4 + 12 + sideColumns * 6) * sizeof(*dl));
+    dl = alloc_display_list((8 + 12 + sideColumns * 6) * sizeof(*dl));
     if (dl == NULL) {
         return NULL;
     }
     dlIter = dl;
-    gSPDisplayList(dlIter++, &dl_proj_mtx_fullscreen);
+    dlIter = fullscreen_projection(dlIter);
     gSPDisplayList(dlIter++, TITLE_BG_BEGIN);
     for (i = 0; i < 12; i++) {
         gSPDisplayList(dlIter++, intro_backdrop_one_image(i, backgroundTable));
