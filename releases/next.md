@@ -1,1 +1,0 @@
-- The sound no longer breaks up for half a second after each screen change (the title, the file select, entering a level).
