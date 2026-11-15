@@ -245,6 +245,18 @@ void queue_samples(int16_t* audio_data, size_t sample_count) {
         }
     }
 
+    // A queue that ran empty gets a retrace of silence in front of the buffer. At each screen change the game resets
+    // its sound (audio_reset_session) and, once its notes have faded, sends the AI nothing for 4 retraces while it
+    // holds gAudioLoadLock, as on a console. That empties the queue's ~26 ms, and the game, which sizes each buffer by
+    // what osAiGetLength says is left, grows it back by under 1 ms a retrace: left to that, the device runs short for
+    // half a second into the next screen's music. The silence puts the cushion back at once, where the game has just
+    // been silent anyway (N64Recomp-browser's docs/new-recomp.md, item 6c).
+    if (cur_queued_microseconds == 0) {
+        static std::vector<float> silence;
+        silence.resize(size_t(output_sample_rate / 60) * output_channels);
+        queue_audio(silence.data(), uint32_t(silence.size() * sizeof(silence[0])));
+    }
+
     queue_audio(samples_to_queue, num_bytes_to_queue);
 }
 

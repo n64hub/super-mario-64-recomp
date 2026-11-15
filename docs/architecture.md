@@ -57,6 +57,13 @@ finding that explains the game's code goes here or beside that code.
   SDL 2.30's `SDL_getenv` on Windows returns one shared buffer, `SDL_DISKAUDIODELAY` must hold the same text as the
   file name (its `atoi` is 0). Any other value replaces the file name, and SDL writes to a file named by it as fast
   as it can.
+- **Sound at a screen change.** Each screen change resets the game's sound (`sound_reset`, `audio_reset_session` on the
+  game thread): its notes fade out, then it holds `gAudioLoadLock` for 3 audio frames while it frees the sound's
+  memory, and the sound thread sends the AI nothing for 4 retraces (66 ms), as on a console. That empties the desktop's
+  queue (about 26 ms), and since the game sizes each buffer by what `osAiGetLength` says is left, it grows the queue
+  back by under 1 ms a retrace: left to that, the device runs short for half a second into the next screen's music.
+  So `queue_samples` queues a retrace of silence in front of a buffer that finds the queue empty, which puts the
+  cushion back at once (N64Recomp-browser's docs/new-recomp.md, item 6c).
 - **Driving it from a test.** A test that plays by posting `WM_KEYDOWN`/`WM_KEYUP` to the game's window (it reaches
   the game whether or not the window has focus) can't hold Left Shift, so B never registers: at every event pump
   SDL2 on Windows releases Left Shift if `GetKeyState(VK_LSHIFT)` says it is up, which is its fix for lost shift
