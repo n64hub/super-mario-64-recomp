@@ -12,9 +12,7 @@ game a page, `tools/build_web.sh`, the prebuilt shader list (`src/rt64_shaders.t
 (`tools/play_plan.json`, `tools/play_plan_extended.json`) and the survey that drives them all
 (`patches/shader_survey.c`, `tools/shader_survey.js`). The rest is N64Recomp-browser's: `docs/porting.md` (WebGPU and
 the shaders, prebuilt shader lists, Emscripten), `docs/playing.md` (playing and measuring a page), `docs/forks.md` and
-`docs/findings.md`. The page plays at [n64hub.com/super-mario-64](https://n64hub.com/super-mario-64/),
-published by N64Recomp-browser's `tools/publish_pages.sh`, and every play of it is a line in N64Recomp-browser's
-`plays.jsonl` (game `sm64`).
+`docs/findings.md`. The page plays at [n64hub.com/super-mario-64](https://n64hub.com/super-mario-64/).
 
 ## Build it
 
@@ -81,11 +79,11 @@ not for every change: every course's six acts, the secret stages' stars and the 
 a player meets them, then the ending to the end of the credits and the cake. Each act is warped into as its painting
 does, its act picked, about 12 s of it played from where it starts Mario, and its star, put where he stands, collected
 as a player does (the dance, the course's end, the save dialog); each Bowser is beaten and his key or the grand star
-taken. Its header says how. Played once in headless Chrome on a desktop GPU at 1256x645, a whole GPU turn
-(N64Recomp-browser's `plays.jsonl`), it took all 97 stars, the three Bowsers, the ending and the credits with no
-WebGPU error and no exception, the game at 29.7 frames a second over the 54 minutes, its loads included. Its 115 shots
-draw right. Its frame gaps over 100 ms (294, none over 250) came one a level load, as the game stops its music for it.
-It missed nine shaders, now in the list (its header).
+taken. Its header says how. Played once in headless Chrome on a desktop GPU at 1256x645, a whole GPU turn, it took all
+97 stars, the three Bowsers, the ending and the credits with no WebGPU error and no exception, the game at 29.7 frames a
+second over the 54 minutes, its loads included. Its 115 shots draw right. Its frame gaps over 100 ms (294, none
+over 250) came one a level load, as the game stops its music for it. It missed nine shaders, now in the list (its
+header).
 
 ## The shader list
 
@@ -105,14 +103,13 @@ starts.
 
 Every place in the list was reached and played on the page as its section was recorded, in headless Chrome at
 1256x645 on a desktop GPU from a fresh profile. Then every section was played again with shots, uncapped, and the shots
-looked at (N64Recomp-browser's `plays.jsonl`, notes `level sweep`): the 15 courses at every act's start and in their other areas
-(Dire, Dire Docks' and Wet-Dry World's second through the floors that take Mario there, Tall, Tall Mountain's slide),
-the castle's three floors room by room, the courtyard and the grounds, Peach's slide, the three cap stages, Wing Mario
-Over the Rainbow, the aquarium, the three Bowser fights (Bowser beaten, his key or the grand star taken, its cutscene,
-the "Congratulations" screen, the castle again, the ending), Bob-omb Battlefield's first star (the dance, the save
-dialog), a death and the Game Over with its Mario head, the pause menu and the act select; the castle's first floor,
-basement and courtyard at 4:3 (960x720) too. Where something looked wrong, the same spot was played on the desktop
-build. What it found:
+looked at: the 15 courses at every act's start and in their other areas (Dire, Dire Docks' and Wet-Dry World's second
+through the floors that take Mario there, Tall, Tall Mountain's slide), the castle's three floors room by room, the
+courtyard and the grounds, Peach's slide, the three cap stages, Wing Mario Over the Rainbow, the aquarium, the three
+Bowser fights (Bowser beaten, his key or the grand star taken, its cutscene, the "Congratulations" screen, the castle
+again, the ending), Bob-omb Battlefield's first star (the dance, the save dialog), a death and the Game Over with its
+Mario head, the pause menu and the act select; the castle's first floor, basement and courtyard at 4:3 (960x720) too.
+Where something looked wrong, the same spot was played on the desktop build. What it found:
 
 - Nothing of the web's: no WebGPU error, no exception, no trap, the game at 30.0 frames a second. The HUD, the sky, the
   fog, water and transparency draw right, in widescreen and at 4:3. The Game Over's dizzy Mario head draws
@@ -148,10 +145,9 @@ in either browser.
 
 The page keeps every enhancement at the desktop's default (README, Modern enhancements): none costs it a frame. Each was
 measured at Original against the defaults, the regular plan played in turn in headless Chrome on a desktop GPU at the
-stand-in's 3840x2000 canvas, uncapped, an idle host (N64Recomp-browser's `plays.jsonl`, sets `sm64-opts-<option>`), and the game
-made 30.0 frames a second in every play, with no shader missed and no WebGPU error. Uncapped, every play's median was
-337-359 presents a second, the ceiling, so what an option costs shows in how busy the GPU was (nvidia-smi's medians),
-the defaults first:
+stand-in's 3840x2000 canvas, uncapped, an idle host, and the game made 30.0 frames a second in every play, with no
+shader missed and no WebGPU error. Uncapped, every play's median was 337-359 presents a second, the ceiling, so what an
+option costs shows in how busy the GPU was (nvidia-smi's medians), the defaults first:
 
 - Aspect Ratio and HUD Placement (widescreen): 345.0 presents and the GPU 80% busy, against 359.4 and 61% at Original.
   That is the canvas's width drawn: at 4:3 a 3840x2000 canvas draws 2667 columns of it and leaves the rest black. On the

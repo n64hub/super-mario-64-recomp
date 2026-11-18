@@ -250,7 +250,7 @@ void queue_samples(int16_t* audio_data, size_t sample_count) {
     // holds gAudioLoadLock, as on a console. That empties the queue's ~26 ms, and the game, which sizes each buffer by
     // what osAiGetLength says is left, grows it back by under 1 ms a retrace: left to that, the device runs short for
     // half a second into the next screen's music. The silence puts the cushion back at once, where the game has just
-    // been silent anyway (N64Recomp-browser's docs/new-recomp.md, item 6c).
+    // been silent anyway.
     if (cur_queued_microseconds == 0) {
         static std::vector<float> silence;
         silence.resize(size_t(output_sample_rate / 60) * output_channels);
