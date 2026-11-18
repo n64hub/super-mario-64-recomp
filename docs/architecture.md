@@ -93,7 +93,7 @@ finding that explains the game's code goes here or beside that code.
     hair were missing or squashed and the eyes, brows and mustache drew alone. Framerate Original drew it whole in all
     16. As a group of its own that RT64 paired by its guess (G_EX_ORDER_AUTO), it drew whole at rest, but parts drawn
     alike paired with each other as the head grew in from its dash, so the frames between drew it turned about 60° and
-    winking, and the sparkles paired with each other, drawn where neither game frame had one: tools/frame_check.mjs
+    winking, and the sparkles paired with each other, drawn where neither game frame had one: a check by machine
     found 58 of 1168 frames of the title unlike both neighbours. The sparkles change from frame to frame, so each
     particle is now a group of its own drawn as the newer frame has it (apply_obj_draw_fn), and what is left, the
     head's parts, is the same list every frame, paired in drawing order (G_EX_ORDER_LINEAR): 0 of 553 frames of the
