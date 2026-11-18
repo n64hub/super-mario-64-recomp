@@ -2,16 +2,18 @@
 # hangs a short boot misses (the ops checklist's 8d), played by tools/frame_dump.mjs --soak 180 on the Linux build. A
 # round plays the boot (the logo, the title's Mario head), Start to the file select, file A with A on a new save, its
 # intro (Peach's letter, Lakitu, the pipe) passed with A until Mario stands in the castle grounds, then 10 s of random
-# input there (the stick, A, B, Z and the camera's C buttons). patches/shader_survey.c then warps Mario into the castle
-# as its door does, for 10 s of random input in the lobby, its first entry's dialog passed with A, and into Bob-omb
-# Battlefield as its painting does, its act select taken with A, where he plays 20 s of random input, pauses and
+# input there (the stick, A, B, Z and the camera's C buttons, A and B twice as often as the rest, so a dialog a sign or
+# a character opens is passed long before its still picture stands 10 s). patches/shader_survey.c then warps Mario into
+# the castle as its door does, for 10 s of random input in the lobby, its first entry's dialog passed with A, and into
+# Bob-omb Battlefield as its painting does, its act select taken with A, where he plays 20 s of random input, pauses and
 # resumes, and 10 s more. Last, Jolly Roger Bay, a course of water, the same way for 15 s. Mario is kept at full health
 # (the survey's invincible) so no death ends a course early. Each scene is held to the game by until steps on the
 # survey's struct, found by its magic words: survey+0x20 the level playing (16 the grounds, 6 the castle, 9 Bob-omb
-# Battlefield, 12 Jolly Roger Bay) and survey+0x2C Mario's action (0x0C400201, standing idle: in control, no cutscene or
-# dialog). The file select is known by its cursor on file A (the decomp's sCursorPos, -94.0 at 0x801A7D1C). Start is
-# never pressed at random: its pause menu's options leave the course. The keys are the game's default keyboard bindings:
-# W A S D the stick, Space A, Shift B, Q Z, Enter Start, the arrows the C buttons.
+# Battlefield, 12 Jolly Roger Bay), survey+0x28 the play mode (0 once a course plays, past its act select) and
+# survey+0x2C Mario's action (0x0C400201, standing idle: in control, no cutscene or dialog). The file select is known by
+# its cursor on file A (the decomp's sCursorPos, -94.0 at 0x801A7D1C). Start is never pressed at random: its pause
+# menu's options leave the course. The keys are the game's default keyboard bindings: W A S D the stick, Space A, Shift
+# B, Q Z, Enter Start, the arrows the C buttons.
 0 find survey 0x534D3634,0x53525659 60
 1 until 0x801A7D1C 0xFFFFFFFF 0xC2BC0000 60 Enter
 2 shot file_select
@@ -19,7 +21,7 @@
 3 until survey+0x2C 0xFFFFFFFF 0x0C400201 90 Space
 3 poke survey+0x1C 1
 3 shot grounds
-4 random W,A,S,D,Space,Shift,Q,Left,Right
+4 random W,A,S,D,Space,Space,Shift,Shift,Q,Left,Right
 14 random off
 14 poke survey+0xC 6
 14 poke survey+0x10 1
@@ -28,33 +30,33 @@
 15 until survey+0x20 0xFFFFFFFF 6 30
 15 until survey+0x2C 0xFFFFFFFF 0x0C400201 60 Space
 15 shot castle
-16 random W,A,S,D,Space,Shift,Q,Left,Right
+16 random W,A,S,D,Space,Space,Shift,Shift,Q,Left,Right
 26 random off
 26 poke survey+0xC 9
 26 poke survey+0x10 1
 26 poke survey+0x14 10
 26 poke survey+0x8 1
 27 until survey+0x20 0xFFFFFFFF 9 30
-27 until survey+0x24 0xFFFFFFFF 0xFFFFFFFF 30
-29 shot bob_act_select
+27 until survey+0x28 0xFFFFFFFF 0 30 Space
+28 shot bob_start
 29 until survey+0x2C 0xFFFFFFFF 0x0C400201 30 Space
 30 shot bob
-31 random W,A,S,D,Space,Shift,Q,Left,Right
+31 random W,A,S,D,Space,Space,Shift,Shift,Q,Left,Right
 51 random off
 52 key Enter
 53 shot pause
 55 key Enter
-56 random W,A,S,D,Space,Shift,Q,Left,Right
+56 random W,A,S,D,Space,Space,Shift,Shift,Q,Left,Right
 66 random off
 66 poke survey+0xC 12
 66 poke survey+0x10 1
 66 poke survey+0x14 10
 66 poke survey+0x8 1
 67 until survey+0x20 0xFFFFFFFF 12 30
-67 until survey+0x24 0xFFFFFFFF 0xFFFFFFFF 30
+67 until survey+0x28 0xFFFFFFFF 0 30 Space
 69 until survey+0x2C 0xFFFFFFFF 0x0C400201 30 Space
 70 shot jrb
-71 random W,A,S,D,Space,Shift,Q,Left,Right
+71 random W,A,S,D,Space,Space,Shift,Shift,Q,Left,Right
 86 random off
 87 peek survey+0x20,survey+0x24,survey+0x2C,survey+0x30
 88 end
