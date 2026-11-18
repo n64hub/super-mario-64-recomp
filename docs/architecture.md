@@ -46,8 +46,7 @@ finding that explains the game's code goes here or beside that code.
   west one B, the left trigger Z, the right trigger R, the left bumper L, Start, and the right stick for the C
   buttons (or north, east, the right stick's click and the right bumper for C left, right, up and down). The game
   is played by one player: Mario reads the first controller found, and the second that `init_controllers` fills
-  (`gPlayer2Controller`) is read by nothing, so there is no second port to give a pad to and N64Recomp-browser's
-  docs/new-recomp.md item 3 (each controller its own port) doesn't apply.
+  (`gPlayer2Controller`) is read by nothing, so there is no second port to give a pad to.
 - **Testing without the speakers.** `main.cpp` asks SDL for WASAPI only when `SDL_AUDIODRIVER` isn't set, so a test
   records the game's sound with SDL's disk driver (`SDL_AUDIODRIVER=disk`, `SDL_DISKAUDIOFILE=<file>`: F32 stereo at
   48 kHz). On Windows that driver runs slow, about 0.92 of real time: it sleeps 5 ms per 5.33 ms buffer, and the
@@ -62,8 +61,8 @@ finding that explains the game's code goes here or beside that code.
   memory, and the sound thread sends the AI nothing for 4 retraces (66 ms), as on a console. That empties the desktop's
   queue (about 26 ms), and since the game sizes each buffer by what `osAiGetLength` says is left, it grows the queue
   back by under 1 ms a retrace: left to that, the device runs short for half a second into the next screen's music.
-  So `queue_samples` queues a retrace of silence in front of a buffer that finds the queue empty, which puts the
-  cushion back at once (N64Recomp-browser's docs/new-recomp.md, item 6c).
+  So `queue_samples` queues a retrace of silence in front of a buffer that finds the queue empty, which puts the cushion
+  back at once.
 - **Driving it from a test.** A test that plays by posting `WM_KEYDOWN`/`WM_KEYUP` to the game's window (it reaches
   the game whether or not the window has focus) can't hold Left Shift, so B never registers: at every event pump
   SDL2 on Windows releases Left Shift if `GetKeyState(VK_LSHIFT)` says it is up, which is its fix for lost shift

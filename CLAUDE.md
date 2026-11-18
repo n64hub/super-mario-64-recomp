@@ -23,9 +23,7 @@ This repo is the game: its recompilation, the patches over it, the desktop build
   (`runtime-patches/`, its README lists them). `xbrz` is xBRZ, vendored, for Hi-res Font.
 - `docs/web.md`: the web page: building it (`tools/build_web.sh`), the survey a script drives it by
   (`patches/shader_survey.c`, `tools/shader_survey.js`), the play plans (`tools/play_plan*.json`), the prebuilt shader
-  list (`src/rt64_shaders.txt`) and what the page measured. The page's part of N64Recomp-browser (its Games row, its
-  part of `docs/game-forks.md`, `tools/publish_pages.sh`'s `sm64`) is there, and every play of the page is a line in
-  N64Recomp-browser's `plays.jsonl` (`play_page.mjs --record plays.jsonl --game sm64`), never here.
+  list (`src/rt64_shaders.txt`) and what the page measured.
 - `docs/architecture.md`: how the game and its recompilation fit together, the facts the code can't say on its
   own (How it fits together, below).
 - Comments beside the code, for how and why: each file's header. Read the header of the file you change and update
@@ -38,9 +36,9 @@ This repo is the game: its recompilation, the patches over it, the desktop build
   the program's icon by `tools/icon.py`) is drawn for the project from plain shapes: no logo, character or picture from
   the game.
 - The decomp is built only where the ROM is, never in CI.
-- The page is built where the ROM is and published to this repo's Pages (`gh-pages`) by N64Recomp-browser's
-  `tools/publish_pages.sh` (its `docs/publishing.md`), its `.data` holding nothing from the ROM. The desktop releases are built where the ROM is too, by
-  `tools/release.sh` (its header says how), and published to GitHub Releases with their notes in `releases/`.
+- The page is built where the ROM is and published to this repo's Pages (`gh-pages`), its `.data` holding nothing from
+  the ROM. The desktop releases are built where the ROM is too, by `tools/release.sh` (its header says how), and
+  published to GitHub Releases with their notes in `releases/`.
 - The scope is the game as it plays, plus what a web page needs (RT64 interpolation to the display's rate, resolution
   Auto), plus the README's Modern enhancements: each an option with an Original value that plays as the console does,
   none changing how the game plays. No camera changes, cheats or 60 fps logic. USA 1.0 only, with one thing
