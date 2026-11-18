@@ -31,6 +31,9 @@
 # the libSDL2 it was built with and libatomic (not on every system) beside the binary (RUNPATH $ORIGIN), as the Windows
 # zip carries SDL2.dll, and is a .tar.gz so the binary stays executable. GTK 3, FreeType and a Vulkan driver are the
 # system's. Run from another folder, the program works from its own (src/main/main.cpp).
+# Either build can come from elsewhere: with WINDOWS_BUILD naming a folder that holds a Release build of
+# SuperMario64Recompiled from this commit (a cross-build, say), windows packs that instead of building, and run inside a
+# container of tools/docker/Dockerfile.linux's image (where there is no Docker), linux builds right there.
 # Both hold assets/ (the launcher's), recompcontrollerdb.txt and COPYING beside the program.
 # v0.1.0's Linux archive was checked by running it in distribution containers under Xvfb with Mesa's software Vulkan
 # (lavapipe), from another folder, the ROM stored beside it, --boot: on Ubuntu 24.04 and Debian 12 it drew the title's
@@ -79,15 +82,20 @@ setup() {
 
 case "${1:-}" in
 windows)
-    setup
-    # tools/env.sh is one machine's toolchain: a PATH that already has clang-cl and a MIPS_CC keeps its own.
-    if [ -z "${MIPS_CC:-}" ]; then source tools/env.sh; fi
-    bash tools/recompile.sh -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl
-    build=build/release-windows
-    cmake -S . -B "$build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl \
-        -DPATCHES_C_COMPILER="$MIPS_CC" -DPATCHES_LD="$MIPS_LD" > "$build.log" 2>&1 || { tail -20 "$build.log"; exit 1; }
-    ninja -C "$build" SuperMario64Recompiled > "$build/build.log" 2>&1 ||
-        { grep -E " error|FAILED|undefined" "$build/build.log" | head -20; exit 1; }
+    if [ -n "${WINDOWS_BUILD:-}" ]; then
+        build=$WINDOWS_BUILD
+        [ -f "$build/SuperMario64Recompiled.exe" ] || { echo "no $build/SuperMario64Recompiled.exe" >&2; exit 1; }
+    else
+        setup
+        # tools/env.sh is one machine's toolchain: a PATH that already has clang-cl and a MIPS_CC keeps its own.
+        if [ -z "${MIPS_CC:-}" ]; then source tools/env.sh; fi
+        bash tools/recompile.sh -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl
+        build=build/release-windows
+        cmake -S . -B "$build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl \
+            -DPATCHES_C_COMPILER="$MIPS_CC" -DPATCHES_LD="$MIPS_LD" > "$build.log" 2>&1 || { tail -20 "$build.log"; exit 1; }
+        ninja -C "$build" SuperMario64Recompiled > "$build/build.log" 2>&1 ||
+            { grep -E " error|FAILED|undefined" "$build/build.log" | head -20; exit 1; }
+    fi
     stage="out/$name-windows-x64"
     rm -rf "$stage" "$stage.zip"
     mkdir -p "$stage"
@@ -99,12 +107,8 @@ windows)
     echo "$stage.zip ($(du -h "$stage.zip" | cut -f1))"
     ;;
 linux)
-    setup
-    image=sm64-linux:$(sha256sum tools/docker/Dockerfile.linux | cut -c1-12)
-    mkdir -p build/home build/ccache
-    docker image inspect "$image" > /dev/null 2>&1 || docker build -t "$image" -f tools/docker/Dockerfile.linux tools/docker
-    docker run --rm -u "$(id -u):$(id -g)" -v "$ROOT:/src" -w /src -e CCACHE_DIR=/src/build/ccache -e HOME=/src/build/home \
-        "$image" bash -euo pipefail -c "
+    # The build, in tools/docker/Dockerfile.linux's image: in this host's Docker, or right here when already in it.
+    linux_build="set -euo pipefail
         git config --global --add safe.directory '*'
         bash tools/recompile.sh -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
         build=build/release-linux
@@ -121,6 +125,17 @@ linux)
         patchelf --set-rpath '\$ORIGIN' \$stage/SuperMario64Recompiled
         cp -r assets \$stage/
         tar -C out -czf \$stage.tar.gz $name-linux-x64"
+    if [ -f /.dockerenv ] && ! command -v docker > /dev/null; then
+        clean
+        bash -c "$linux_build"
+    else
+        setup
+        image=sm64-linux:$(sha256sum tools/docker/Dockerfile.linux | cut -c1-12)
+        mkdir -p build/home build/ccache
+        docker image inspect "$image" > /dev/null 2>&1 || docker build -t "$image" -f tools/docker/Dockerfile.linux tools/docker
+        docker run --rm -u "$(id -u):$(id -g)" -v "$ROOT:/src" -w /src -e CCACHE_DIR=/src/build/ccache -e HOME=/src/build/home \
+            "$image" bash -c "$linux_build"
+    fi
     echo "$commit" > "out/$name-linux-x64.tar.gz.commit"
     echo "out/$name-linux-x64.tar.gz ($(du -h "out/$name-linux-x64.tar.gz" | cut -f1))"
     ;;
