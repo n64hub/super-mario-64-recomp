@@ -1,0 +1,41 @@
+# The save run of N64Recomp-browser's save check (tools/frame_dump.mjs --saves, with tools/load_plan.txt): the sound
+# mode chosen on the file select, which the game writes to EEPROM (save_file_set_sound_mode, the menu data's
+# soundMode). Enter on the title until the file select's cursor rests on file A (sCursorPos, 0x801A7D1C and 0x801A7D20,
+# -94.0 and 46.0), and sSelectedButtonID (0x801A7D10, a byte) is still none (0xFF), or an Enter the title missed has
+# clicked file A. The stick moves the hand 10 a frame (30 a second) and stops at the screen's edges (x 132, y 90), so
+# each move starts from an edge, held until sCursorPos reads it, or is caught by an until whose mask is a range of
+# floats (S: y -64 to -32), and then held a set time that lands within the button's middle (x 72-122 and y -74 to -32
+# for SOUND, 49-99 and -21 to 21 for HEADSET, check_clicked_button's boxes) give or take two frames. A (Space) opens
+# SOUND and picks HEADSET. A new EEPROM's menu data is wiped to Stereo (0) as the game boots, so the menu data's
+# soundMode in gSaveBuffer (the halfword at 0x802078D0, the top of its word) reads 2 only once the pick is made: a pick
+# missed fails this run, which checks nothing, and not the load run.
+0 until 0x801A7D1C 0xFFFFFFFF 0xC2BC0000 90 Enter
+1 until 0x801A7D10 0xFF000000 0xFF000000 1
+1 until 0x802078D0 0xFFFF0000 0x00000000 1
+1.5 shot fileselect
+2 down D
+2 until 0x801A7D1C 0xFFFFFFFF 0x43040000 5
+2 up D
+2.5 key A 100
+3 down S
+3 until 0x801A7D20 0xFF800000 0xC2000000 5
+3 up S
+3.5 peek 0x801A7D1C,0x801A7D20
+3.5 shot sound
+4 key Space 100
+6 shot soundselect
+6.5 down W
+6.5 until 0x801A7D20 0xFFFFFFFF 0x42B40000 5
+6.5 up W
+7 down D
+7 until 0x801A7D1C 0xFFFFFFFF 0x43040000 5
+7 up D
+7.5 key S 300
+8 key A 200
+8.5 peek 0x801A7D1C,0x801A7D20
+8.5 shot headset
+9 key Space 100
+10 until 0x802078D0 0xFFFF0000 0x00020000 5
+12 saves changed 15
+12.5 shot saved
+16 end
