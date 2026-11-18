@@ -90,9 +90,15 @@ finding that explains the game's code goes here or beside that code.
   - The title's Mario head is goddard's own list, a matrix per part of the head and per sparkle of the star cursor.
     Paired in drawing order inside the generated node's group, its face was blended toward another part or a sparkle
     as the sparkles came and went: in about 6 of the first 16 captures of the title left alone at 4K, the skin, cap and
-    hair were missing or squashed and the eyes, brows and mustache drew alone, and in 6 and 10 of 20 shots of the page
-    in two plays in Chrome. Framerate Original drew it whole in all 16. As a group of its own that RT64 pairs by its
-    guess (G_EX_ORDER_AUTO), it drew whole in all 21 captures, and in all 20 shots of the page in Chrome and in Firefox.
+    hair were missing or squashed and the eyes, brows and mustache drew alone. Framerate Original drew it whole in all
+    16. As a group of its own that RT64 paired by its guess (G_EX_ORDER_AUTO), it drew whole at rest, but parts drawn
+    alike paired with each other as the head grew in from its dash, so the frames between drew it turned about 60° and
+    winking, and the sparkles paired with each other, drawn where neither game frame had one: tools/frame_check.mjs
+    found 58 of 1168 frames of the title unlike both neighbours. The sparkles change from frame to frame, so each
+    particle is now a group of its own drawn as the newer frame has it (apply_obj_draw_fn), and what is left, the
+    head's parts, is the same list every frame, paired in drawing order (G_EX_ORDER_LINEAR): 0 of 553 frames of the
+    title failed at 59 Hz, and 3 of 1310 at 240 Hz, and in a play that grabs the head and drags it around, 3 of 1360
+    (single frames of a sparkle or a head spinning fast).
   - The skybox shows no uncovered edge through a full turn, and the door's star or circle wipe grows in half steps.
     Colour fades (the fade from white into a course) step at 30 as on a console: RT64 blends geometry, not colour.
   - Cool, Cool Mountain's falling snow moves nearly with the camera, so drawn with the newer frame's vertices under a

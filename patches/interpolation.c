@@ -17,6 +17,7 @@
 #include "game/save_file.h"
 #include "game/screen_transition.h"
 #include "game/segment2.h"
+#include "goddard/gd_types.h"
 
 // RT64's interpolation to the display's rate (its Framerate Display). The game draws 30 frames a second; RT64 draws the
 // frames between two of them by pairing each matrix of the newer frame with one of the older and blending the two. Left
@@ -53,8 +54,9 @@
 //   text and rectangles at fixed places.
 // - Dialogs and menus (render_menus_and_dialogs): a matrix per letter, all one group paired in drawing order, its id
 //   changed by whatever changes that order. Untagged, RT64 paired a letter with another drawn with the same texture.
-// - Goddard's Mario head (geo_draw_mario_head_goddard): goddard's own list, a matrix per part of the head and per
-//   sparkle of the star cursor, is a group of its own paired by RT64's guess, since the sparkles change its order.
+// - Goddard's Mario head (geo_draw_mario_head_goddard, apply_obj_draw_fn): goddard's own list, a matrix per part of the
+//   head and per sparkle of the star cursor, is a group of its own paired in drawing order, and its sparkles are drawn
+//   as the newer frame has them, outside that order.
 // - Warp transitions (render_screen_transition): the shrinking or growing star or circle of a door, a painting or a pipe
 //   is vertices the game moves each frame, so its group blends vertices too.
 // - Falling snow (envfx_update_snow): flakes the game makes again each frame, moving nearly with the camera, so they are
@@ -846,9 +848,13 @@ RECOMP_PATCH s16 render_menus_and_dialogs(void) {
 // Goddard's Mario head (the title and the game over screen). Goddard builds its own list, a matrix for each part of the
 // head and for each sparkle the star cursor trails, and the sparkles come and go among the parts. In the group
 // geo_append_display_list gives the list, paired in drawing order, a part was blended toward another part or a sparkle
-// as their number changed: the face drawn off screen or squashed, its eyes and mustache alone in its place. Here the
-// list is a group of its own that RT64 pairs by its guess (G_EX_ORDER_AUTO): each matrix with the closest of the older
-// frame's drawn alike.
+// as their number changed: the face drawn off screen or squashed, its eyes and mustache alone in its place. Paired by
+// RT64's guess (G_EX_ORDER_AUTO), each matrix with the closest of the older frame's drawn alike, the parts drawn alike
+// (an eye and the other, a brow and the other) paired with each other as the head grew in from a dash on the title: the
+// frames between drew it turned about 60 degrees, winking with its mouth open, and the sparkles, all alike, paired
+// with each other and were drawn where neither frame had one. So each particle goddard draws (a sparkle with the
+// sparkles it trails) is a group RT64 doesn't interpolate (apply_obj_draw_fn), drawn as the newer frame has it, and
+// the parts left in the list are paired in drawing order, which only the sparkles changed.
 #define GODDARD_ID 0x474F4444 // "GODD"
 
 extern void (*gGoddardVblankCallback)(void);
@@ -857,6 +863,38 @@ void gd_vblank(void);
 void gd_copy_p1_contpad(OSContPad *p1cont);
 s32 gd_sfx_to_play(void);
 void play_menu_sounds(s16 soundMenuFlags);
+
+// goddard's (renderer.c, debug_utils.c): the next command of the list it is building, and its error stop.
+Gfx *next_gfx(void);
+void fatal_print(const char *msg);
+
+static s32 sGdParticleDepth;
+
+// The game's, with each particle drawn outside the head's group: one group a particle and the particles it draws, a
+// few commands a frame in goddard's list (its sub-particles are drawn inside their parent's draw).
+RECOMP_PATCH void apply_obj_draw_fn(struct GdObj *obj) {
+    s32 particle;
+
+    if (obj == NULL) {
+        fatal_print("Bad object!");
+    }
+    if (obj->drawFlags & OBJ_INVISIBLE) {
+        return;
+    }
+
+    particle = obj->type == OBJ_TYPE_PARTICLES && sGdParticleDepth == 0;
+    if (particle) {
+        Gfx *g = next_gfx();
+        next_gfx(); // the group is two commands
+        gEXMatrixGroupNoInterpolate(g, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+    }
+    sGdParticleDepth++;
+    obj->objDrawFn(obj);
+    sGdParticleDepth--;
+    if (particle) {
+        gEXPopMatrixGroup(next_gfx(), G_MTX_MODELVIEW);
+    }
+}
 
 // The game's, its list inside the group.
 RECOMP_PATCH Gfx *geo_draw_mario_head_goddard(s32 callContext, struct GraphNode *node, UNUSED Mat4 *c) {
@@ -878,7 +916,7 @@ RECOMP_PATCH Gfx *geo_draw_mario_head_goddard(s32 callContext, struct GraphNode 
             gEXMatrixGroupDecomposed(g++, make_id(GODDARD_ID, asGenerated->parameter, sCutCount), G_EX_PUSH,
                                      G_MTX_MODELVIEW, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE,
                                      G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE,
-                                     G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO, G_EX_ORDER_AUTO, G_EX_EDIT_NONE,
+                                     G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO, G_EX_ORDER_LINEAR, G_EX_EDIT_NONE,
                                      G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO);
             gSPDisplayList(g++, head);
             gEXPopMatrixGroup(g++, G_MTX_MODELVIEW);
