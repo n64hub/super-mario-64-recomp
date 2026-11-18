@@ -1,0 +1,36 @@
+# The load run of N64Recomp-browser's save check (tools/frame_dump.mjs --saves), after tools/save_plan.txt, the
+# program started again in the same folder: the game reads its EEPROM as it boots (save_file_load_all), and at the file
+# select the menu data's soundMode in gSaveBuffer (0x802078D0's top halfword) and the file select's own sSoundMode
+# (0x801A7D40, a byte) are Headset (2) only if it came off the save: a boot without one wipes the menu data to Stereo
+# (0). Nothing is written by then. Then MONO is picked as the save plan picks HEADSET (its header says how the hand is
+# moved), held left from the right edge until x is within -25 to 25: a second save through the check's links.
+0 until 0x801A7D1C 0xFFFFFFFF 0xC2BC0000 90 Enter
+1 until 0x801A7D10 0xFF000000 0xFF000000 1
+1 until 0x802078D0 0xFFFF0000 0x00020000 5
+1 until 0x801A7D40 0xFF000000 0x02000000 1
+1.5 shot fileselect
+2 saves same
+2.5 down D
+2.5 until 0x801A7D1C 0xFFFFFFFF 0x43040000 5
+2.5 up D
+3 key A 100
+3.5 down S
+3.5 until 0x801A7D20 0xFF800000 0xC2000000 5
+3.5 up S
+4 key Space 100
+6 shot soundselect
+6.5 down W
+6.5 until 0x801A7D20 0xFFFFFFFF 0x42B40000 5
+6.5 up W
+7 down D
+7 until 0x801A7D1C 0xFFFFFFFF 0x43040000 5
+7 up D
+7.5 key S 300
+8 key A 433
+8.5 peek 0x801A7D1C,0x801A7D20
+8.5 shot mono
+9 key Space 100
+10 until 0x802078D0 0xFFFF0000 0x00010000 5
+11 saves changed 15
+11.5 shot saved
+15 end

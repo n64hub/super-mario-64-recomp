@@ -40,7 +40,11 @@ finding that explains the game's code goes here or beside that code.
 - **Saves.** EEPROM, 4 Kbit: the decomp's `save_file.h` has `EEPROM_SIZE` 0x200 and `save_file.c` asserts the save
   buffer is exactly that. `main.cpp` declares `SaveType::Eep4k`; the runtime keeps it in
   `saves/sm64.n64.us.1.0.bin`, in the game's own byte order, and writes it a moment after the game saves, so a test
-  waits a few seconds before it stops the game.
+  waits a few seconds before it stops the game. That the Linux build finds its save again after a restart, the save
+  folder and its file reached through symlinks, is checked by N64Recomp-browser's `tools/frame_dump.mjs --saves` with
+  `tools/save_plan.txt` (the file select's sound mode set to Headset, which the game writes to EEPROM) and
+  `tools/load_plan.txt` (Headset read back in RAM at the next start's file select, then Mono saved); their headers
+  say how each step is judged.
 - **Input.** RecompFrontend's default bindings, nothing of the game's own. Keyboard: WASD the stick, Space A, Left
   Shift B, Q Z, R R, E L, Enter Start, the arrows the C buttons. A gamepad: the left stick, the south button A, the
   west one B, the left trigger Z, the right trigger R, the left bumper L, Start, and the right stick for the C
