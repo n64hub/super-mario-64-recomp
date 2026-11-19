@@ -1,0 +1,29 @@
+# The desktop build's answer plan (ops docs/new-recomp.md, 4d: a press reaches the picture at once and the view stays
+# where the stick leaves it), for frame_dump.mjs's answer steps with its stand-in pad and --no-dump, at the default
+# limits (500 ms to answer, 1000 ms to settle). Its steps are capture_window.ps1's, at seconds since the program
+# started (an until's wait moves the rest on). It reaches the castle grounds with Mario standing, by
+# patches/shader_survey.c's struct (survey) and Start (Enter) and A (Space) through the title and the file select,
+# then C-up (the Up key) into first-person look, where the stick turns the view and it stays where the stick leaves
+# it. There it looks right on the stick (leftx) and on D, each looked back by an untimed step, then holds the stick
+# 1.5 s. It plays C-up and not Lakitu's camera, which is still moving 2.5 s after a release: the decomp's camera.c,
+# free roam (about lines 2140-2232), turns the camera back behind a standing Mario at 0xC0 a frame, the game's own.
+# v0.1.14 passes: the stick's look answered in 86 ms and settled in 262 ms, D's in 89 and 277 ms, the 1.5 s hold's
+# in 65 and 2 ms.
+0 find survey 0x534D3634,0x53525659 60
+1 until 0x801A7D1C 0xFFFFFFFF 0xC2BC0000 60 Enter
+3 until survey+0x20 0xFFFFFFFF 16 30 Space
+4 until survey+0x2C 0xFFFFFFFF 0x0C400201 90 Space
+4 poke survey+0x1C 1
+8 shot grounds
+9 key Up 100
+12 shot look
+13 answer look-right leftx 32767 0.4 500 1000
+18 pad leftx -32768
+18.4 pad leftx 0
+22 answer look-key key:D 1 0.4 500 1000
+27 key A 400
+31 answer look-hold leftx 32767 1.5 500 1000
+37 pad leftx -32768
+38.5 pad leftx 0
+42 shot end
+43 end
