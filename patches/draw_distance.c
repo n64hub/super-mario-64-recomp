@@ -1,11 +1,17 @@
 #include "patches.h"
+#include "model_ids.h"
 #include "object_constants.h"
 #include "object_fields.h"
 #include "surface_terrains.h"
 
 #include "engine/graph_node.h"
+#include "engine/math_util.h"
+#include "engine/surface_collision.h"
 #include "engine/surface_load.h"
+#include "game/area.h"
 #include "game/game_init.h"
+#include "game/level_update.h"
+#include "game/memory.h"
 #include "game/object_helpers.h"
 #include "game/object_list_processor.h"
 
@@ -26,12 +32,30 @@
 //
 // An object the game hid for another reason stays hidden: one in a room (its room decides), one held, one that hides
 // itself with cur_obj_disable_rendering after loading its collision. A hidden object (GRAPH_RENDER_INVISIBLE) stays
-// out of view (obj_is_in_view). Objects the game spawns only near Mario (a coin formation's coins, Goombas from their
-// spawner) don't exist further out, so they still appear where they did.
+// out of view (obj_is_in_view).
+//
+// A coin formation (a line, ring or arrow of coins, bhvCoinFormation) spawns its coins only once Mario is within 2000
+// units of it and deletes them past 2100 (bhv_coin_formation_loop), so further out there is no coin to draw: on High a
+// ring's lone middle coin showed from across a course and the ring around it didn't. draw_distance_coins draws the
+// coins a formation would spawn as far as a lone coin is drawn, the option's scale times the formation's drawing
+// distance (4000, a coin's too), with no object made: each where spawn_coin_in_formation and
+// bhv_coin_formation_spawn_loop would put it (on the floor, or left out where theirs is deleted), the ones collected
+// left out, from a scratch object (sFarCoin) the game never sees. interpolation.c tags each by its formation and index
+// (draw_distance_tag), since the scratch object is the same for all. Inside 2000 the game's own coins take over in the
+// same places. A level with rooms (sLevelsWithRooms) gets none, as its coins' rooms decide them. Goombas from their
+// spawner still appear only where they did.
 
-// The game's own functions this file uses that its headers leave out (surface_load.c's are static).
+// The game's own functions and data this file uses that its headers leave out (surface_load.c's and
+// rendering_graph_node.c's functions are static).
 void transform_object_vertices(TerrainData **data, TerrainData *vertexData);
 void load_object_surfaces(TerrainData **data, TerrainData *vertexData);
+void geo_process_object(struct Object *node);
+extern s8 sLevelsWithRooms[];
+extern s16 sCoinArrowPositions[][2];
+
+// bhvCoinFormation, by its address in the behaviors' segment (0x13), and the distance its coins spawn within.
+#define BHV_COIN_FORMATION ((const BehaviorScript *) 0x130008EC)
+#define COIN_FORMATION_SPAWN_DIST 2000.0f
 
 // For each pool object that load_object_collision_model hid for its distance: its behaviour when it did (so a slot
 // used again by another object doesn't count) and Mario's distance then. NULL when it showed it.
@@ -49,6 +73,18 @@ static struct Object *sHeld;
 
 static s32 sScale;
 static u32 sScaleFrame = 0xFFFFFFFF;
+
+// The coin draw_distance_coins draws, and the id interpolation.c tags it by (0 while none is drawn).
+static struct Object sFarCoin;
+u32 draw_distance_tag = 0;
+
+static s32 scale(void) {
+    if (sScaleFrame != gGlobalTimer) {
+        sScale = recomp_get_draw_distance_scale();
+        sScaleFrame = gGlobalTimer;
+    }
+    return sScale;
+}
 
 static s32 pool_slot(struct Object *obj) {
     u32 offset = (u32) obj - (u32) gObjectPool;
@@ -97,14 +133,7 @@ static s32 hidden_by_distance(struct Object *obj, s32 i) {
 s32 draw_distance_begin(struct Object *obj) {
     s32 i = pool_slot(obj);
 
-    if (i < 0) {
-        return FALSE;
-    }
-    if (sScaleFrame != gGlobalTimer) {
-        sScale = recomp_get_draw_distance_scale();
-        sScaleFrame = gGlobalTimer;
-    }
-    if (sScale <= 1 || !hidden_by_distance(obj, i)) {
+    if (i < 0 || scale() <= 1 || !hidden_by_distance(obj, i)) {
         return FALSE;
     }
 
@@ -133,6 +162,107 @@ void draw_distance_end(struct Object *obj) {
     bcopy(&sSavedObj, obj, sizeof(struct Object));
     if (sHeld != NULL) {
         bcopy(&sSavedHeld, sHeld, sizeof(struct Object));
+    }
+}
+
+// Called for every object of the scene after the game's own drawing of it: for a coin formation that hasn't spawned its
+// coins for Mario's distance, with Mario within the option's scale of the formation's drawing distance, draws the coins
+// it would spawn.
+void draw_distance_coins(struct Object *obj) {
+    s32 slot = pool_slot(obj);
+    s32 shape;
+    s32 i;
+
+    if (slot < 0 || obj->behavior != segmented_to_virtual(BHV_COIN_FORMATION)
+        || !(obj->activeFlags & ACTIVE_FLAG_ACTIVE) || obj->oAction != COIN_FORMATION_ACT_SPAWN_COINS
+        || obj->oDistanceToMario < COIN_FORMATION_SPAWN_DIST || scale() <= 1
+        || !(obj->oDistanceToMario < obj->oDrawingDistance * sScale)
+        || is_item_in_array(gCurrLevelNum, sLevelsWithRooms)) {
+        return;
+    }
+    shape = obj->oBhvParams2ndByte & COIN_FORMATION_BP_FLAG_MASK;
+
+    for (i = 0; i <= 7; i++) {
+        s32 pos[3] = { 0, 0, 0 };
+        s32 onGround = TRUE;
+        s32 model = MODEL_YELLOW_COIN;
+        struct Surface *floor;
+        f32 floorHeight;
+
+        // A line has 5 coins.
+        if ((obj->oCoinCollectedFlags & (1 << i))
+            || ((shape == COIN_FORMATION_BP_LINE_HORIZONTAL || shape == COIN_FORMATION_BP_LINE_VERTICAL) && i > 4)) {
+            continue;
+        }
+
+        // spawn_coin_in_formation's place for coin i.
+        switch (shape) {
+            case COIN_FORMATION_BP_LINE_HORIZONTAL:
+                pos[2] = 160 * (i - 2);
+                break;
+            case COIN_FORMATION_BP_LINE_VERTICAL:
+                onGround = FALSE;
+                pos[1] = 160 * i * 0.8;
+                break;
+            case COIN_FORMATION_BP_RING_HORIZONTAL:
+                pos[0] = sins(i << 13) * 300.0f;
+                pos[2] = coss(i << 13) * 300.0f;
+                break;
+            case COIN_FORMATION_BP_RING_VERTICAL:
+                onGround = FALSE;
+                pos[0] = coss(i << 13) * 200.0f;
+                pos[1] = sins(i << 13) * 200.0f + 200.0f;
+                break;
+            case COIN_FORMATION_BP_ARROW:
+                pos[0] = sCoinArrowPositions[i][0];
+                pos[2] = sCoinArrowPositions[i][1];
+                break;
+        }
+        if (obj->oBhvParams2ndByte & COIN_FORMATION_BP_FLAG_FLYING) {
+            onGround = FALSE;
+        }
+
+        // spawn_object_relative's position, from the formation's own.
+        sFarCoin = *obj;
+        sFarCoin.oParentRelativePosX = (s16) pos[0];
+        sFarCoin.oParentRelativePosY = (s16) pos[1];
+        sFarCoin.oParentRelativePosZ = (s16) pos[2];
+        obj_build_transform_from_pos_and_angle(&sFarCoin, O_PARENT_RELATIVE_POS_INDEX, O_FACE_ANGLE_INDEX);
+        obj_translate_local(&sFarCoin, O_POS_INDEX, O_PARENT_RELATIVE_POS_INDEX);
+
+        // bhv_coin_formation_spawn_loop's first frame: on the floor (or deleted), or without its shadow in the air.
+        if (onGround) {
+            sFarCoin.oPosY += 300.0f;
+            floorHeight = find_floor(sFarCoin.oPosX, sFarCoin.oPosY, sFarCoin.oPosZ, &floor);
+            if (sFarCoin.oPosY < floorHeight || floorHeight < FLOOR_LOWER_LIMIT_MISC) {
+                continue;
+            }
+            sFarCoin.oPosY = floorHeight;
+        } else {
+            floorHeight = find_floor(sFarCoin.oPosX, sFarCoin.oPosY, sFarCoin.oPosZ, &floor);
+            if (absf(sFarCoin.oPosY - floorHeight) > 250.0f) {
+                model = MODEL_YELLOW_COIN_NO_SHADOW;
+            }
+        }
+        if (gLoadedGraphNodes[model] == NULL) {
+            continue;
+        }
+
+        sFarCoin.header.gfx.sharedChild = gLoadedGraphNodes[model];
+        sFarCoin.header.gfx.node.flags = GRAPH_RENDER_ACTIVE | GRAPH_RENDER_BILLBOARD;
+        sFarCoin.header.gfx.node.children = NULL;
+        sFarCoin.header.gfx.throwMatrix = NULL;
+        sFarCoin.header.gfx.animInfo.curAnim = NULL;
+        sFarCoin.header.gfx.pos[0] = sFarCoin.oPosX;
+        sFarCoin.header.gfx.pos[1] = sFarCoin.oPosY;
+        sFarCoin.header.gfx.pos[2] = sFarCoin.oPosZ;
+        vec3f_set(sFarCoin.header.gfx.scale, 1.0f, 1.0f, 1.0f);
+        sFarCoin.prevObj = NULL;
+        sFarCoin.oAnimState = gGlobalTimer;
+
+        draw_distance_tag = ((u32) slot << 3 | i) + 1;
+        geo_process_object(&sFarCoin);
+        draw_distance_tag = 0;
     }
 }
 

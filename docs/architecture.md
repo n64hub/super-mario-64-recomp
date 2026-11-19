@@ -136,7 +136,10 @@ finding that explains the game's code goes here or beside that code.
   object's state that it puts back after: its animation's frame, `cameraToObject` (which places its sounds), the throw
   matrix, what its model's geo functions write, and the object it holds. The animation drawn advances in a copy of its
   own and goes back to the game's frame inside the game's distance. Objects in rooms and held objects are left as the
-  game has them, and spawners that make objects only near Mario (coin formations, Goomba triplets) still do.
+  game has them. A coin formation spawns its coins only within 2000 units of Mario and deletes them past 2100
+  (`bhv_coin_formation_loop`), so the renderer draws the coins it would spawn, in their places, out to 4 times the
+  formation's own drawing distance (4000, a lone coin's too), from a scratch object and without spawning them
+  (`draw_distance_coins`). Goomba triplets, the other spawner that makes objects only near Mario, still do.
 - **Input lag** (`patches/enhancements.c`). The game triple-buffers and swaps to the frame drawn the frame before
   (`sRenderedFramebuffer`); Reduced swaps to the one just sent. RT64 presents a swap after the task that draws it, so
   nothing tears.

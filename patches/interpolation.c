@@ -183,6 +183,7 @@ static u32 display_list_id(void) {
     struct GraphNodeObject *obj = gCurGraphNodeObject;
     struct GraphNode *tagNode = sTagNode;
     s32 i;
+    u32 id;
     if (gCurGraphNodeHeldObject != NULL && gCurGraphNodeHeldObject->objNode != NULL) {
         obj = &gCurGraphNodeHeldObject->objNode->header.gfx;
     }
@@ -190,7 +191,9 @@ static u32 display_list_id(void) {
         tagNode = tagNode->parent;
     }
     i = pool_index(obj);
-    return make_id((u32) tagNode, (u32) obj + (i >= 0 ? sObjTeleports[i] : 0), sCutCount);
+    id = make_id((u32) tagNode, (u32) obj + (i >= 0 ? sObjTeleports[i] : 0), sCutCount);
+    // A coin draw_distance.c draws for a formation, from one scratch object for all: by its formation and index.
+    return draw_distance_tag != 0 ? make_id(id, draw_distance_tag, 0) : id;
 }
 
 RECOMP_PATCH void geo_append_display_list(void *displayList, s16 layer) {
@@ -335,7 +338,8 @@ RECOMP_PATCH void geo_process_camera(struct GraphNodeCamera *node) {
 
 // The game's, with sTagNode set around each node's processing (and restored after, for a parent that appends its
 // display list after its children), the orthographic projection noted for its master list, each object checked for
-// a teleport, and an object the game hides only for its distance drawn as Draw Distance says (draw_distance.c).
+// a teleport, and an object the game hides only for its distance and the coins a coin formation hasn't spawned for
+// it drawn as Draw Distance says (draw_distance.c).
 RECOMP_PATCH void geo_process_node_and_siblings(struct GraphNode *firstNode) {
     s16 iterateChildren = TRUE;
     struct GraphNode *curGraphNode = firstNode;
@@ -386,6 +390,7 @@ RECOMP_PATCH void geo_process_node_and_siblings(struct GraphNode *firstNode) {
                     case GRAPH_NODE_TYPE_OBJECT:
                         check_teleport((struct Object *) curGraphNode);
                         geo_process_object((struct Object *) curGraphNode);
+                        draw_distance_coins((struct Object *) curGraphNode);
                         break;
                     case GRAPH_NODE_TYPE_ANIMATED_PART:
                         geo_process_animated_part((struct GraphNodeAnimatedPart *) curGraphNode);
@@ -427,6 +432,7 @@ RECOMP_PATCH void geo_process_node_and_siblings(struct GraphNode *firstNode) {
                     geo_process_object((struct Object *) curGraphNode);
                     draw_distance_end((struct Object *) curGraphNode);
                 }
+                draw_distance_coins((struct Object *) curGraphNode);
                 ((struct GraphNodeObject *) curGraphNode)->throwMatrix = NULL;
             }
         }

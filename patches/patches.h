@@ -44,6 +44,8 @@ void shader_survey_tick(void);
 struct Object;
 s32 draw_distance_begin(struct Object *obj);
 void draw_distance_end(struct Object *obj);
+void draw_distance_coins(struct Object *obj);
+extern u32 draw_distance_tag;
 
 // widescreen.c, for the other patches.
 f32 widescreen_aspect(void);
