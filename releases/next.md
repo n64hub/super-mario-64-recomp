@@ -1,1 +1,0 @@
-- With Draw Distance on High, rings, lines and arrows of coins are drawn as far away as single coins, out to 16,000 units, instead of appearing only once Mario is within 2000 units of them. They are still made only as he comes near, as in the game.
