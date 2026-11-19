@@ -223,7 +223,7 @@ void draw_distance_coins(struct Object *obj) {
         }
 
         // spawn_object_relative's position, from the formation's own.
-        bcopy(obj, &sFarCoin, sizeof(struct Object));
+        sFarCoin = *obj;
         sFarCoin.oParentRelativePosX = (s16) pos[0];
         sFarCoin.oParentRelativePosY = (s16) pos[1];
         sFarCoin.oParentRelativePosZ = (s16) pos[2];
