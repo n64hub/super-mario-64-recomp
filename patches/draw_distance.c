@@ -35,15 +35,15 @@
 // out of view (obj_is_in_view).
 //
 // A coin formation (a line, ring or arrow of coins, bhvCoinFormation) spawns its coins only once Mario is within 2000
-// units of it and deletes them past 2100 (bhv_coin_formation_loop), so further out there is no coin to draw: on High
-// a ring's lone middle coin showed from across a course and the ring around it didn't. draw_distance_coins draws the
+// units of it and deletes them past 2100 (bhv_coin_formation_loop), so further out there is no coin to draw: on High a
+// ring's lone middle coin showed from across a course and the ring around it didn't. draw_distance_coins draws the
 // coins a formation would spawn as far as a lone coin is drawn, the option's scale times the formation's drawing
-// distance (4000, a coin's too), with no object made: each where
-// spawn_coin_in_formation and bhv_coin_formation_spawn_loop would put it (on the floor, or left out where theirs is
-// deleted), the ones collected left out, from a scratch object (sFarCoin) the game never sees. interpolation.c tags
-// each by its formation and index (draw_distance_tag), since the scratch object is the same for all. Inside 2000 the
-// game's own coins take over in the same places. A level with rooms (sLevelsWithRooms) gets none, as its coins' rooms
-// decide them. Goombas from their spawner still appear only where they did.
+// distance (4000, a coin's too), with no object made: each where spawn_coin_in_formation and
+// bhv_coin_formation_spawn_loop would put it (on the floor, or left out where theirs is deleted), the ones collected
+// left out, from a scratch object (sFarCoin) the game never sees. interpolation.c tags each by its formation and index
+// (draw_distance_tag), since the scratch object is the same for all. Inside 2000 the game's own coins take over in the
+// same places. A level with rooms (sLevelsWithRooms) gets none, as its coins' rooms decide them. Goombas from their
+// spawner still appear only where they did.
 
 // The game's own functions and data this file uses that its headers leave out (surface_load.c's and
 // rendering_graph_node.c's functions are static).

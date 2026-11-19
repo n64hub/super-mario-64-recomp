@@ -55,8 +55,9 @@ has an Original value that runs the game as it shipped.
   objects more than 4000 units from Mario, so across a course they appeared only as he came near: the bars in front of
   the star behind Chain Chomp's gate show from Bob-omb Battlefield's start, 10,000 units away. Only what is drawn
   changes: out there an object moves and acts as the game has it, its sounds stay the game's, and its animation plays
-  for the picture alone, so nothing an object does waits on being drawn. Objects the game makes only near Mario, such
-  as a ring of coins or a group of Goombas, still appear where they did.
+  for the picture alone, so nothing an object does waits on being drawn. A ring, line or arrow of coins, which the game
+  makes only within 2000 units of Mario, is drawn as far out as a single coin, 16,000 units, without being made any
+  sooner. A group of Goombas, which the game also makes only near Mario, still appears where it did.
 - **No frame copies to RAM**: each frame stays on the GPU instead of also being drawn again at 320×240 and copied back
   into the console's memory, which the game never reads.
 - **Rumble**: a gamepad rumbles as a Rumble Pak does in the Japanese *Shindou* edition, the later release that added
