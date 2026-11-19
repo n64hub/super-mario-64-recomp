@@ -37,7 +37,8 @@
 // A coin formation (a line, ring or arrow of coins, bhvCoinFormation) spawns its coins only once Mario is within 2000
 // units of it and deletes them past 2100 (bhv_coin_formation_loop), so further out there is no coin to draw: on High
 // a ring's lone middle coin showed from across a course and the ring around it didn't. draw_distance_coins draws the
-// coins a formation would spawn, out to the option's scale times 2000, with no object made: each where
+// coins a formation would spawn as far as a lone coin is drawn, the option's scale times the formation's drawing
+// distance (4000, a coin's too), with no object made: each where
 // spawn_coin_in_formation and bhv_coin_formation_spawn_loop would put it (on the floor, or left out where theirs is
 // deleted), the ones collected left out, from a scratch object (sFarCoin) the game never sees. interpolation.c tags
 // each by its formation and index (draw_distance_tag), since the scratch object is the same for all. Inside 2000 the
@@ -165,7 +166,8 @@ void draw_distance_end(struct Object *obj) {
 }
 
 // Called for every object of the scene after the game's own drawing of it: for a coin formation that hasn't spawned its
-// coins for Mario's distance, with Mario within the option's scale of that distance, draws the coins it would spawn.
+// coins for Mario's distance, with Mario within the option's scale of the formation's drawing distance, draws the coins
+// it would spawn.
 void draw_distance_coins(struct Object *obj) {
     s32 slot = pool_slot(obj);
     s32 shape;
@@ -174,7 +176,7 @@ void draw_distance_coins(struct Object *obj) {
     if (slot < 0 || obj->behavior != segmented_to_virtual(BHV_COIN_FORMATION)
         || !(obj->activeFlags & ACTIVE_FLAG_ACTIVE) || obj->oAction != COIN_FORMATION_ACT_SPAWN_COINS
         || obj->oDistanceToMario < COIN_FORMATION_SPAWN_DIST || scale() <= 1
-        || !(obj->oDistanceToMario < COIN_FORMATION_SPAWN_DIST * sScale)
+        || !(obj->oDistanceToMario < obj->oDrawingDistance * sScale)
         || is_item_in_array(gCurrLevelNum, sLevelsWithRooms)) {
         return;
     }
