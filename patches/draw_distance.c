@@ -258,7 +258,9 @@ void draw_distance_coins(struct Object *obj) {
         sFarCoin.header.gfx.pos[2] = sFarCoin.oPosZ;
         vec3f_set(sFarCoin.header.gfx.scale, 1.0f, 1.0f, 1.0f);
         sFarCoin.prevObj = NULL;
-        sFarCoin.oAnimState = gGlobalTimer;
+        // Its spin, a case of the model's 8 a frame as a spawned coin's (bhv_coin_formation_spawn_loop adds 1 a frame).
+        // geo_switch_anim_state shows case 0 for a state past the last, so a bare timer would hold it still.
+        sFarCoin.oAnimState = gGlobalTimer % 8;
 
         draw_distance_tag = ((u32) slot << 3 | i) + 1;
         geo_process_object(&sFarCoin);
