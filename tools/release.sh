@@ -34,7 +34,7 @@
 # Either build can come from elsewhere: with WINDOWS_BUILD naming a folder that holds a Release build of
 # SuperMario64Recompiled from this commit (a cross-build, say), windows packs that instead of building, and run inside a
 # container of tools/docker/Dockerfile.linux's image (where there is no Docker), linux builds right there.
-# Both hold assets/ (the launcher's), recompcontrollerdb.txt and COPYING beside the program.
+# Both hold assets/ (the launcher's), recompcontrollerdb.txt, recomplauncher.json and COPYING beside the program.
 # v0.1.0's Linux archive was checked by running it in distribution containers under Xvfb with Mesa's software Vulkan
 # (lavapipe), from another folder, the ROM stored beside it, --boot: on Ubuntu 24.04 and Debian 12 it drew the title's
 # Mario head for 2 minutes. No Linux GPU has run it.
@@ -99,7 +99,7 @@ windows)
     stage="out/$name-windows-x64"
     rm -rf "$stage" "$stage.zip"
     mkdir -p "$stage"
-    cp "$build"/{SuperMario64Recompiled.exe,SDL2.dll,dxil.dll,dxcompiler.dll} recompcontrollerdb.txt COPYING "$stage"/
+    cp "$build"/{SuperMario64Recompiled.exe,SDL2.dll,dxil.dll,dxcompiler.dll} recompcontrollerdb.txt recomplauncher.json COPYING "$stage"/
     cp -r assets "$stage"/
     # CMake's own zip, so packing needs nothing the build doesn't.
     (cd out && cmake -E tar cf "$name-windows-x64.zip" --format=zip "$name-windows-x64")
@@ -120,7 +120,7 @@ linux)
         stage=out/$name-linux-x64
         rm -rf \$stage \$stage.tar.gz
         mkdir -p \$stage
-        cp \$build/SuperMario64Recompiled recompcontrollerdb.txt COPYING \$stage/
+        cp \$build/SuperMario64Recompiled recompcontrollerdb.txt recomplauncher.json COPYING \$stage/
         cp -L /usr/local/lib/libSDL2-2.0.so.0 /usr/lib/x86_64-linux-gnu/libatomic.so.1 \$stage/
         patchelf --set-rpath '\$ORIGIN' \$stage/SuperMario64Recompiled
         cp -r assets \$stage/
